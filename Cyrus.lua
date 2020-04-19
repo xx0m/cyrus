@@ -1,5 +1,7 @@
 local C = {}
 
+print('tongue my anus')
+
 --client['exec']('clear')
 
 C['Config'] = {
