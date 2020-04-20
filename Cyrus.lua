@@ -1,6 +1,6 @@
 local C = {}
 
-client['exec']('clear')
+--client['exec']('clear')
 
 C['Config'] = {
     ['Panel'] = 'LUA',
@@ -113,6 +113,7 @@ C['ChangeLogs'] = {
     '',
     '===== 1.01 (Apr 20 2020) =====',
     'Fixed \'Show OG messages\' not disabling when you disable translator',
+    'Improved reliability & added end match round count for end of match ping',
     'Added auto update [to forum post]',
     'Fixed !buy from being used by yourself',
     'Changed way chat commands work, they now pass speaker as argument so team handling is within each function',
