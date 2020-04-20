@@ -1,6 +1,6 @@
 local C = {}
 
-client['exec']('clear')
+--client['exec']('clear')
 
 C['Config'] = {
     ['Panel'] = 'LUA',
