@@ -13,9 +13,6 @@ C['JS']['Funcs'] = panorama['loadstring']([[
     return {
         GetLastTranslation: function() {
             return cyrus_last_translation;
-        },
-        GetJSON: function() {
-            return cyrus_json;
         }
     }
 ]])()
@@ -86,23 +83,6 @@ C['Libs'] = {
                 return str
             end
         end
-    },
-    ['JSON'] = {
-        ['Initialise'] = function()
-            local url = 'https://gist.githubusercontent.com/tylerneylon/59f4bcf316be525b30ab/raw/7f69cc2cea38bf68298ed3dbfc39d197d53c80de/json.lua'
-
-            panorama['loadstring']([[
-                $.AsyncWebRequest(']] .. url .. [[', {type: 'GET', complete: function(c) {
-                    cyrus_json = c.responseText;
-                }});
-            ]])()
-
-            client['delay_call'](1, function()
-                local json = C['JS']['Funcs'].GetJSON()
-
-                C['Libs']['JSON']['Funcs'] = loadstring(json)()
-            end)
-        end
     }
 }
 
@@ -112,13 +92,11 @@ end
 
 C['ChangeLogs'] = {
     '',
-    '===== 1.01 (Apr 20 2020) =====',
-    'Fixed \'Show OG messages\' not disabling when you disable translator',
-    'Improved reliability & added end match round count for end of match ping',
-    'Added auto update [to forum post]',
-    'Fixed !buy from being used by yourself',
-    'Changed way chat commands work, they now pass speaker as argument so team handling is within each function',
-    'Added chat command tsay, eg !tsay ru hello world [ you can change chat command prefixes ctrl + f \'CmdPrefix\' default is ! ]'
+    '===== 1.10 (Apr 21 2020) =====',
+    'Updated for latest update',
+    'Removed json library & replaced with skeets inbuilt one',
+    'Added option to enable chat translating [if you don\'t want to translate chat msgs but still use stuff like .tsay] [also should lower rate limite speed]',
+    'Changed how discord messages display the profile url [removed the shitty embeds it creates]'
 }
 
 C['Colours'] = {
@@ -264,11 +242,11 @@ C['Notifications'] = {
 }
 
 C['P'] = {
-    ['MyPersonaAPI'] = C['JS']['MyPersonaAPI'],
-    ['LobbyAPI'] = C['JS']['LobbyAPI'],
-    ['PartyListAPI'] = C['JS']['PartyListAPI'],
-    ['MatchInfoAPI'] = C['JS']['MatchInfoAPI'],
-    ['GameStateAPI'] = C['JS']['GameStateAPI']
+    ['MyPersonaAPI'] = C['JS']['Open']['MyPersonaAPI'],
+    ['LobbyAPI'] = C['JS']['Open']['LobbyAPI'],
+    ['PartyListAPI'] = C['JS']['Open']['PartyListAPI'],
+    ['MatchInfoAPI'] = C['JS']['Open']['MatchInfoAPI'],
+    ['GameStateAPI'] = C['JS']['Open']['GameStateAPI']
 }
 
 C['ConCmd'] = {
@@ -322,7 +300,7 @@ C['ConCmd'] = {
         ['psay'] = {
             ['Func'] = function(tab)
                 if (tab[2] == nil or tab[2] == '') then
-                    C['Notifications']['ConsoleLog']('Invalid use, exmaple usage: cyrus_pchat Hello World!', false, '', '')
+                    C['Notifications']['ConsoleLog']('Invalid use, exmaple usage: cyrus_psay Hello World!', false, '', '')
                 else
                     local str = ''
 
@@ -1260,7 +1238,7 @@ C['Funcs'] = {
                     local nick = entity['get_player_name'](i)
                     local rank = base['GetCompRank'](i)
                     local sid64 = base['SteamID3To64'](entity['get_steam64'](i))
-                    local sid64Format = 'https://steamcommunity.com/profiles/' .. sid64 .. '/'
+                    local sid64Format = '<https://steamcommunity.com/profiles/' .. sid64 .. '/>'
                     local isBot = base['IsBot'](i)
         
                     if (isBot) then
@@ -1309,7 +1287,7 @@ C['Funcs'] = {
             if (isBot) then
                 str = str .. [[\n\t● ]] .. nick .. ' (BOT)'
             else
-                str = str .. [[\n\t● ]] .. nick .. ' ([' .. sid64 .. '](https://steamcommunity.com/profiles/' .. sid64 .. '/)) (' .. rank .. ')'
+                str = str .. [[\n\t● ]] .. nick .. ' ([' .. sid64 .. '](<https://steamcommunity.com/profiles/' .. sid64 .. '/>)) (' .. rank .. ')'
             end
 
             str = str .. ' (' .. kills .. '/' .. assists .. '/ ' .. deaths .. ') (mvp: ' .. mvp .. ' score: ' .. score .. ')'
@@ -1322,12 +1300,14 @@ C['Funcs'] = {
     end,
     ['DoChatTranslation'] = function(text, bool, me, toLang)
         local baseCD = C['Vars']['Translator']
+
         if (not baseCD['OnCD']) then
             local get = ui['get']
             local col = C['Colours']
             local baseTranslator = C['UI']['Other']['Translator']
             local baseHidden = baseTranslator['Hidden']
             local url = 'https://translate.googleapis.com/translate_a/single?client=gtx&sl=' .. get(baseHidden['Source']) .. '&tl='
+            local doIncoming = baseTranslator['Hidden']['Incoming']['Element']
 
             local languageToTranslateTo = toLang or get(baseHidden['To'])
 
@@ -1339,42 +1319,44 @@ C['Funcs'] = {
 
             url = url .. '&dt=t&q=' .. C['Libs']['URLEncoder']['Encode'](text)
 
-            panorama['loadstring']([[
-                $.AsyncWebRequest(']] .. url .. [[', {type: 'GET', complete: function(c) {
-                    cyrus_last_translation = c;
-                }});
-            ]])()
+            if (doIncoming or bool) then
+                panorama['loadstring']([[
+                    $.AsyncWebRequest(']] .. url .. [[', {type: 'GET', complete: function(c) {
+                        cyrus_last_translation = c;
+                    }});
+                ]])()
 
-            client['delay_call'](1, function()
-                local response = C['JS']['Funcs'].GetLastTranslation()
+                client['delay_call'](1, function()
+                    local response = C['JS']['Funcs'].GetLastTranslation()
 
-                if (response['responseText'] and response['statusText'] ~= 'error') then
-                    local txt = response['responseText']
-                    local tab = C['Libs']['JSON']['Funcs']['parse'](txt)
-                    local translatedText = tab[1][1][1]
-                    local fromText = tab[1][1][2]
-                    local detectedLang = tab[9][1][1]
+                    if (response['responseText'] and response['statusText'] ~= 'error') then
+                        local txt = response['responseText']
+                        local tab = json.parse(txt)
+                        local translatedText = tab[1][1][1]
+                        local fromText = tab[1][1][2]
+                        local detectedLang = tab[9][1][1]
 
-                    if (detectedLang ~= get(baseHidden['Local']) and bool) then
-                        C['Notifications']['Send'](col['White'] .. '[' .. col['Red'] .. detectedLang .. col['White'] .. '] ' , true, translatedText, 'translate')
-                    elseif (me) then
-                        client['exec'](C['Funcs']['GetChatMode'](), translatedText)
+                        if (detectedLang ~= get(baseHidden['Local']) and bool) then
+                            C['Notifications']['Send'](col['White'] .. '[' .. col['Red'] .. detectedLang .. col['White'] .. '] ' , true, translatedText, 'translate')
+                        elseif (me) then
+                            client['exec'](C['Funcs']['GetChatMode'](), translatedText)
 
-                        if (get(baseTranslator['Element']) and get(C['UI']['Other']['Translator']['Hidden']['OGMsg']['Element'])) then
-                            client['delay_call'](0.1, function()
-                                C['Notifications']['Send'](col['White'] .. '[' .. col['Red'] .. 'og msg' .. col['White'] .. '] ' , true, fromText, 'translate')
-                            end)
+                            if (get(baseTranslator['Element']) and get(baseTranslator['Hidden']['Outgoing']['Element'])) then
+                                client['delay_call'](0.1, function()
+                                    C['Notifications']['Send'](col['White'] .. '[' .. col['Red'] .. 'og msg' .. col['White'] .. '] ' , true, fromText, 'translate')
+                                end)
+                            end
                         end
-                    end
-                elseif (me) then
-                    client['exec'](C['Funcs']['GetChatMode'](), text)
-                    client['delay_call'](0.1, function()
-                        C['Notifications']['Send'](col['White'] .. '[' .. col['Red'] .. 'translator' .. col['White'] .. '] ' , true, 'You\'re rate limited by google, sending normal message.', 'translate')
-                    end)
+                    elseif (me) then
+                        client['exec'](C['Funcs']['GetChatMode'](), text)
+                        client['delay_call'](0.1, function()
+                            C['Notifications']['Send'](col['White'] .. '[' .. col['Red'] .. 'translator' .. col['White'] .. '] ' , true, 'You\'re rate limited by google, sending normal message.', 'translate')
+                        end)
 
-                    ui['set'](C['UI']['Other']['Translator']['Hidden']['Chat'], false)
-                end
-            end)
+                        ui['set'](baseTranslator['Hidden']['Outgoing']['Element'], false)
+                    end
+                end)
+            end
         end
     end
 }
@@ -1676,11 +1658,16 @@ C['UI'] = {
         ['Translator'] = {
             ['Element'] = ui['new_checkbox'](C['Config']['Panel'], C['Config']['Side'], 'Translator'),
             ['Hidden'] = {
-                ['Chat'] = ui['new_checkbox'](C['Config']['Panel'], C['Config']['Side'], 'Auto Translate Outoging Messages', false),
-                ['OGMsg'] = {
-                    ['Element'] = ui['new_checkbox'](C['Config']['Panel'], C['Config']['Side'], 'Display OG message', false),
+                ['Incoming'] = {
+                    ['Element'] = ui['new_checkbox'](C['Config']['Panel'], C['Config']['Side'], 'Translate Incoming Messages', false),
                     ['Callback'] = function(e)
-                        C['Notifications']['Send']('Display OG Translation Message', ui['get'](e))
+                        C['Notifications']['Send']('Translate Incoming Messages', ui['get'](e))
+                    end
+                },
+                ['Outgoing'] = {
+                    ['Element'] = ui['new_checkbox'](C['Config']['Panel'], C['Config']['Side'], 'Translate Outgoing Messages', false),
+                    ['Callback'] = function(e)
+                        C['Notifications']['Send']('Translate Outgoing Messages', ui['get'](e))
                     end
                 },
                 ['lblLocal'] = ui['new_label'](C['Config']['Panel'], C['Config']['Side'], 'Local Language [yours]'),
@@ -1713,7 +1700,8 @@ C['UI'] = {
                     end
                 end
 
-                ui['set_visible'](base['OGMsg']['Element'], bool)
+                ui['set_visible'](base['Incoming']['Element'], bool)
+                ui['set_visible'](base['Outgoing']['Element'], bool)
 
                 C['Notifications']['Send']('Translator', bool)
             end
@@ -1901,7 +1889,7 @@ C['Events'] = {
         ['Func'] = function(e)
             C['Vars']['TeamKillData'] = {}
 
-            client.delay_call(0.1, function()
+            client.delay_call(1, function()
                 if (ui['get'](C['UI']['Utilities']['End Ping']['Element'])) then
                     local map = globals['mapname']() .. [[\n\n]]
                     local base = C['DB']['Ping']
@@ -2177,3 +2165,27 @@ for cat, entry in pairs(C['UI']) do
 end
 
 C['Funcs']['PrintChangelogs']()
+
+ui.new_button('CONFIG', 'Lua', 'Test', function()
+    local map = globals['mapname']() .. [[\n\n]]
+    local base = C['DB']['Ping']
+    local teamInitials = C['Funcs']['GetTeamInitials']
+    local pingPlyTbl = C['Funcs']['StartPlayerTable']
+    
+    local content = '<@' .. database['read'](base['ID']) .. [[> CS:GO Match Started\n\n]]
+    content = content .. '**Map:** ' .. map
+    content = content .. '**Your Team (' .. teamInitials(true) .. ')**' .. pingPlyTbl(true)
+    content = content .. '**Enemy Team (' .. teamInitials(false) .. ')**' .. pingPlyTbl(false)
+
+    panorama['loadstring']([[
+        $.AsyncWebRequest(']] .. database['read'](base['Webhook']) .. [[',
+        {
+            type: 'POST',
+            data: {
+                'content': ']] .. content .. [['
+            },
+            complete: function (data){
+            }
+        });
+    ]])()
+end)
