@@ -116,7 +116,7 @@ C['ChangeLogs'] = {
     'Added auto update [to forum post]',
     'Fixed !buy from being used by yourself',
     'Changed way chat commands work, they now pass speaker as argument so team handling is within each function',
-    'Added chat command tsay, eg !tsay ru hello world [ you can change chat command prefixes ctrl + f 'CmdPrefix' default is ! ]'
+    'Added chat command tsay, eg !tsay ru hello world [ you can change chat command prefixes ctrl + f \'CmdPrefix\' default is ! ]'
 }
 
 C['Colours'] = {
