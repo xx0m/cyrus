@@ -1,6 +1,6 @@
 local C = {}
 
---client['exec']('clear')
+client['exec']('clear')
 
 C['Config'] = {
     ['Panel'] = 'LUA',
@@ -1083,6 +1083,20 @@ C['Votes'] = {
     ['VoteOptions'] = {}
 }
 
+local char_to_hex = function(c)
+    return string.format("%%%02X", string.byte(c))
+end
+
+local function urlencode(url)
+    if url == nil then
+        return
+    end
+    url = url:gsub("\n", "\r\n")
+    url = url:gsub("([^%w ])", char_to_hex)
+    url = url:gsub(" ", "+")
+    return url
+end
+
 C['Funcs'] = {
     ['PrintChangelogs'] = function()
         local col = C['Colours']['RGB']
@@ -1358,7 +1372,7 @@ C['Funcs'] = {
                     elseif (me) then
                         client['exec'](C['Funcs']['GetChatMode'](), translatedText)
 
-                        if (get(baseTranslator['Element'] and get(C['UI']['Other']['Translator']['Hidden']['OGMsg']['Element'])) then
+                        if (get(baseTranslator['Element']) and get(C['UI']['Other']['Translator']['Hidden']['OGMsg']['Element'])) then
                             client['delay_call'](0.1, function()
                                 C['Notifications']['Send'](col['White'] .. '[' .. col['Red'] .. 'og msg' .. col['White'] .. '] ' , true, fromText, 'translate')
                             end)
