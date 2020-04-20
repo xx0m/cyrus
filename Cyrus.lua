@@ -7,7 +7,8 @@ C['Config'] = {
     ['Side'] = 'A'
 }
 
-C['JS'] = panorama['open']()
+C['JS'] = {}
+C['JS']['Open'] = panorama['open']()
 C['JS']['Funcs'] = panorama['loadstring']([[
     return {
         GetLastTranslation: function() {
