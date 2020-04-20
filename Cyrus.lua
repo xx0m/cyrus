@@ -1,8 +1,6 @@
 local C = {}
 
-print('tongue my anus')
-
---client['exec']('clear')
+client['exec']('clear')
 
 C['Config'] = {
     ['Panel'] = 'LUA',
@@ -113,10 +111,12 @@ end
 
 C['ChangeLogs'] = {
     '',
-    '===== 1.01 (Apr 19 2020) =====',
-    'Fixed mimicing other players with translator enabled',
-    'Added end of match stats discord ping [set cyrus_webhook_end to use] [uses separate webhook in case ppl want it for diff channel]',
-    'Auto DC will now un-lock your movement keys so you\'re not stuck next time you spawn in a match'
+    '===== 1.01 (Apr 20 2020) =====',
+    'Fixed \'Show OG messages\' not disabling when you disable translator',
+    'Added auto update [to forum post]',
+    'Fixed !buy from being used by yourself',
+    'Changed way chat commands work, they now pass speaker as argument so team handling is within each function',
+    'Added chat command tsay, eg !tsay ru hello world [ you can change chat command prefixes ctrl + f 'CmdPrefix' default is ! ]'
 }
 
 C['Colours'] = {
@@ -265,7 +265,8 @@ C['P'] = {
     ['MyPersonaAPI'] = C['JS']['MyPersonaAPI'],
     ['LobbyAPI'] = C['JS']['LobbyAPI'],
     ['PartyListAPI'] = C['JS']['PartyListAPI'],
-    ['MatchInfoAPI'] = C['JS']['MatchInfoAPI']
+    ['MatchInfoAPI'] = C['JS']['MatchInfoAPI'],
+    ['GameStateAPI'] = C['JS']['GameStateAPI']
 }
 
 C['ConCmd'] = {
@@ -419,41 +420,47 @@ C['Chat'] = {
     ['CmdPrefix'] = '!',
     ['Commands'] = {
         ['buy'] = {
-            ['Func'] = function(args)
-                if (ui['get'](C['UI']['MM']['AFK Buy-Drop']['Element'])) then
-                    if (args) then
-                        local wep = args[2]
+            ['Func'] = function(args, speaker)
+                local speakerTeam =  C['Funcs']['GetTeam'](speaker)
+                local me = entity['get_local_player']()
+                local myTeam =  C['Funcs']['GetTeam'](me)
 
-                        if (#wep >= 2 and #wep <= 8) then
-                            local base = C['Vars']['BuyBot']['WeaponData'][wep]
-                            local mode = C['Funcs']['GetChatMode']()
-                            local cmd = client['exec']
+                if (speakerTeam == myTeam and speaker ~= me) then
+                    if (ui['get'](C['UI']['MM']['AFK Buy-Drop']['Element'])) then
+                        if (args) then
+                            local wep = args[2]
 
-                            if (base) then
-                                local money = C['Funcs']['GetMoney'](entity['get_local_player']())
-                                local ent, cost = base['ent'], base['cost']
+                            if (#wep >= 2 and #wep <= 8) then
+                                local base = C['Vars']['BuyBot']['WeaponData'][wep]
+                                local mode = C['Funcs']['GetChatMode']()
+                                local cmd = client['exec']
 
-                                if (money >= cost) then
-                                    cmd('buy ', ent)
+                                if (base) then
+                                    local money = C['Funcs']['GetMoney'](entity['get_local_player']())
+                                    local ent, cost = base['ent'], base['cost']
 
-                                    client['delay_call'](1, function()
-                                        cmd('slot0')
+                                    if (money >= cost) then
+                                        cmd('buy ', ent)
 
-                                        client['delay_call'](0, function()
-                                            cmd('drop')
+                                        client['delay_call'](1, function()
+                                            cmd('slot0')
+
+                                            client['delay_call'](0, function()
+                                                cmd('drop')
+                                            end)
                                         end)
-                                    end)
+                                    else
+                                        cmd(mode, 'I\'m too much of a poor fag to afford it :^(')
+                                    end
                                 else
-                                    cmd(mode, 'I\'m too much of a poor fag to afford it :^(')
+                                    cmd(mode, 'Invalid weapon name provided \'' .. wep .. '\'')
                                 end
-                            else
-                                cmd(mode, 'Invalid weapon name provided \'' .. wep .. '\'')
                             end
                         end
                     end
                 end
             end
-        }
+        },
     },
     ['Spam'] = {
         ['LastChatMessage'] = globals['tickcount'](),
@@ -1049,13 +1056,6 @@ C['Vars'] = {
     ['Translator'] = {
         ['OnCD'] = false,
         ['CDTimer'] = 300
-    },
-    ['EndPing'] = {
-        ['Rounds'] = {
-            [2] = 0,
-            [3] = 0,
-            ['LastWinMsg'] = 0
-        }
     }
 }
 
@@ -1223,14 +1223,27 @@ C['Funcs'] = {
     end,
     ['GetTeamInitials'] = function(bool)
         local myTeam = C['Funcs']['GetTeam'](entity['get_local_player']())
-    
-        return ((bool and myTeam == 3) and 'CT' or 'T') or ((not bool and myTeam == 2) and 'T' or 'CT')
+        local enemyTeam = (myTeam == 3) and 2 or 3
+
+        if (bool) then
+            return myTeam == 3 and 'CT' or 'T'
+        else
+            return enemyTeam == 3 and 'CT' or 'T'
+        end
     end,
     ['GetTeamRounds'] = function(bool)
         local myTeam = C['Funcs']['GetTeam'](entity['get_local_player']())
-        local base = C['Vars']['EndPing']['Rounds']
-    
-        return ((bool and myTeam == 3) and base[3] or base[2]) or ((not bool and myTeam == 2) and base[2] or base[3])
+        local enemyTeam = (myTeam == 3) and 2 or 3
+        local gameData = C['P']['GameStateAPI']['GetScoreDataJSO']()['teamdata']
+        local team = ''
+
+        if (bool) then
+            team = myTeam == 3 and 'CT' or 'TERRORIST'
+        else
+            team = enemyTeam == 3 and 'CT' or 'TERRORIST'
+        end
+
+        return gameData[team]['score']
     end,
     ['StartPlayerTable'] = function(bool)
         local base = C['Funcs']
@@ -1305,18 +1318,21 @@ C['Funcs'] = {
     ['PartyChatSay'] = function(text)
         C['P']['PartyListAPI']['SessionCommand']('Game::Chat', 'run all xuid ' .. C['P']['MyPersonaAPI']['GetXuid']() .. ' chat ' .. text)
     end,
-    ['DoChatTranslation'] = function(text, bool, me)
+    ['DoChatTranslation'] = function(text, bool, me, toLang)
         local baseCD = C['Vars']['Translator']
         if (not baseCD['OnCD']) then
             local get = ui['get']
             local col = C['Colours']
-            local base = C['UI']['Other']['Translator']['Hidden']
-            local url = 'https://translate.googleapis.com/translate_a/single?client=gtx&sl=' .. get(base['Source']) .. '&tl='
+            local baseTranslator = C['UI']['Other']['Translator']
+            local baseHidden = baseTranslator['Hidden']
+            local url = 'https://translate.googleapis.com/translate_a/single?client=gtx&sl=' .. get(baseHidden['Source']) .. '&tl='
+
+            local languageToTranslateTo = toLang or get(baseHidden['To'])
 
             if (bool) then
-                url = url .. get(base['Local'])
+                url = url .. get(baseHidden['Local'])
             else
-                url = url .. get(base['To'])
+                url = url .. languageToTranslateTo
             end
 
             url = url .. '&dt=t&q=' .. C['Libs']['URLEncoder']['Encode'](text)
@@ -1337,12 +1353,12 @@ C['Funcs'] = {
                     local fromText = tab[1][1][2]
                     local detectedLang = tab[9][1][1]
 
-                    if (detectedLang ~= get(base['Local']) and bool) then
+                    if (detectedLang ~= get(baseHidden['Local']) and bool) then
                         C['Notifications']['Send'](col['White'] .. '[' .. col['Red'] .. detectedLang .. col['White'] .. '] ' , true, translatedText, 'translate')
                     elseif (me) then
                         client['exec'](C['Funcs']['GetChatMode'](), translatedText)
 
-                        if (get(C['UI']['Other']['Translator']['Hidden']['OGMsg']['Element'])) then
+                        if (get(baseTranslator['Element'] and get(C['UI']['Other']['Translator']['Hidden']['OGMsg']['Element'])) then
                             client['delay_call'](0.1, function()
                                 C['Notifications']['Send'](col['White'] .. '[' .. col['Red'] .. 'og msg' .. col['White'] .. '] ' , true, fromText, 'translate')
                             end)
@@ -1853,10 +1869,6 @@ C['Events'] = {
     ['round_announce_match_start'] = {
         ['Func'] = function(e)
             C['Vars']['TeamKillData'] = {}
-            C['Vars']['EndPing']['Rounds'] = {
-                [2] = 0,
-                [3] = 0
-            }
 
             if (ui['get'](C['UI']['Utilities']['Start Ping']['Element'])) then
                 local map = globals['mapname']() .. [[\n\n]]
@@ -1887,45 +1899,39 @@ C['Events'] = {
         ['Func'] = function(e)
             C['Vars']['TeamKillData'] = {}
 
-            if (ui['get'](C['UI']['Utilities']['End Ping']['Element'])) then
-                local map = globals['mapname']()
-                local base = C['DB']['Ping']
-                local teamInitials = C['Funcs']['GetTeamInitials']
-                local teamRounds = C['Funcs']['GetTeamRounds']
-                local pingPlyTbl = C['Funcs']['EndPlayerTable']
-            
-                local gameScore = teamRounds(true) .. ':' .. teamRounds(false)
-            
-                local content = [[CS:GO Match Finished\n\n]]
-                content = content .. '**Map:** ' .. map .. [[\n\n]]
-                --content = content .. '**Score**: ' .. gameScore .. [[\n\n]]
-                content = content .. '**Your Team (' .. teamInitials(true) .. ')**' .. pingPlyTbl(true)
-                content = content .. '**Enemy Team (' .. teamInitials(false) .. ')**' .. pingPlyTbl(false)
-            
-                panorama['loadstring']([[
-                    $.AsyncWebRequest(']] .. database['read'](base['WebhookEnd']) .. [[',
-                    {
-                        type: 'POST',
-                        data: {
-                            'content': ']] .. content .. [['
-                        },
-                        complete: function (data){
-                        }
-                    });
-                ]])()
-            end
+            client.delay_call(0.1, function()
+                if (ui['get'](C['UI']['Utilities']['End Ping']['Element'])) then
+                    local map = globals['mapname']() .. [[\n\n]]
+                    local base = C['DB']['Ping']
+                    local teamInitials = C['Funcs']['GetTeamInitials']
+                    local teamRounds = C['Funcs']['GetTeamRounds']
+                    local pingPlyTbl = C['Funcs']['EndPlayerTable']
+                    local gameScore = teamRounds(true) .. ':' .. teamRounds(false)
 
-            C['Vars']['EndPing']['Rounds'] = {
-                [2] = 0,
-                [3] = 0
-            }
+                    local content = [[CS:GO Match Finished\n\n]]
+                    content = content .. '**Map:** ' .. map
+                    content = content .. '**Score**: ' .. gameScore .. [[\n\n]]
+                    content = content .. '**Your Team (' .. teamInitials(true) .. ')**' .. pingPlyTbl(true)
+                    content = content .. '**Enemy Team (' .. teamInitials(false) .. ')**' .. pingPlyTbl(false)
+                
+                    panorama['loadstring']([[
+                        
+                        $.AsyncWebRequest(']] .. database['read'](base['WebhookEnd']) .. [[',
+                        {
+                            type: 'POST',
+                            data: {
+                                'content': ']] .. content .. [['
+                            },
+                            complete: function (data){
+                            }
+                        });
+                    ]])()
+                end
 
-            if (ui['get'](C['UI']['Utilities']['Auto Leave']['Element'])) then
-                client['exec']('disconnect')
-                client['delay_call'](0.5, function()
-                    client['exec']('-forward;-back;-left;-right;-duck;-moveleft;-moveright;-speed')
-                end)
-            end
+                if (ui['get'](C['UI']['Utilities']['Auto Leave']['Element'])) then
+                    client['exec']('disconnect')
+                end
+            end)
         end
     },
     ['cs_game_disconnected'] = {
@@ -2066,7 +2072,7 @@ C['Events'] = {
             local myTeam =  C['Funcs']['GetTeam'](me)
             local text = e['text']
 
-            if (ui['get'](C['UI']['MM']['AFK Buy-Drop']['Element']) and speakerTeam == myTeam) then
+            if (ui['get'](C['UI']['MM']['AFK Buy-Drop']['Element'])) then
                 local prefix = C['Chat']['CmdPrefix']
 
                 if (text:sub(1,#prefix) == prefix) then
@@ -2075,7 +2081,7 @@ C['Events'] = {
 
                     if (C['Funcs']['IsValidChatCmd'](cmd)) then
                         text[1] = nil
-                        C['Chat']['Commands'][cmd]['Func'](text)
+                        C['Chat']['Commands'][cmd]['Func'](text, speaker)
                     end
                 end
             end
@@ -2125,29 +2131,24 @@ C['Events'] = {
     ['string_cmd'] = {
         ['Func'] = function(e)
             local text = e['text']
+            local message = text:sub(#'say "' + 1, #text - 1)
 
-            if (ui['get'](C['UI']['Other']['Translator']['Hidden']['Chat']) and not C['Vars']['Translator']['OnCD']) then
-                if (text:sub(1, 5) == 'say "' and text ~= 'say ""' and text ~= 'say " "') then
-                    local message = text:sub(#'say "' + 1, #text - 1)
+            if (ui['get'](C['UI']['Other']['Translator']['Element'])) then
+                if (message:sub(1, #'.tsay ') == '.tsay ') then
+                    local language = message:sub(#'.tsay ' + 1, string.find(message, ' ', #'.tsay ' + 1) - 1)
+                    local translateMsg = message:sub(#('.tsay ' .. language) + 2, #message)
 
-                    C['Funcs']['DoChatTranslation'](message, false, true)
-
+                    C['Funcs']['DoChatTranslation'](translateMsg, false, true, language)
                     return true
                 end
-            end
-        end
-    },
-    ['round_end'] = {
-        ['Func'] = function(e)
-            local team = e['winner']
-            local base = C['Vars']['EndPing']['Rounds']
 
-            if (base[team] == nil) then
-                base[team] = 0
+                if (ui['get'](C['UI']['Other']['Translator']['Hidden']['Chat']) and not C['Vars']['Translator']['OnCD']) then
+                    if (text:sub(1, 5) == 'say "' and text ~= 'say ""' and text ~= 'say " "') then
+                        C['Funcs']['DoChatTranslation'](message, false, true)
+                        return true
+                    end
+                end
             end
-
-            base[team] = base[team] + 1
-            base['LastWinMsg'] = e['reason']
         end
     }
 }
