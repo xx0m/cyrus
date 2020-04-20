@@ -1307,7 +1307,6 @@ C['Funcs'] = {
             local baseTranslator = C['UI']['Other']['Translator']
             local baseHidden = baseTranslator['Hidden']
             local url = 'https://translate.googleapis.com/translate_a/single?client=gtx&sl=' .. get(baseHidden['Source']) .. '&tl='
-            local doIncoming = baseTranslator['Hidden']['Incoming']['Element']
 
             local languageToTranslateTo = toLang or get(baseHidden['To'])
 
@@ -1319,7 +1318,8 @@ C['Funcs'] = {
 
             url = url .. '&dt=t&q=' .. C['Libs']['URLEncoder']['Encode'](text)
 
-            if (doIncoming or bool) then
+            if (ui['get'](baseTranslator['Hidden']['Incoming']['Element']) or me) then
+                print('woohoo')
                 panorama['loadstring']([[
                     $.AsyncWebRequest(']] .. url .. [[', {type: 'GET', complete: function(c) {
                         cyrus_last_translation = c;
@@ -1341,7 +1341,7 @@ C['Funcs'] = {
                         elseif (me) then
                             client['exec'](C['Funcs']['GetChatMode'](), translatedText)
 
-                            if (get(baseTranslator['Element']) and get(baseTranslator['Hidden']['Outgoing']['Element'])) then
+                            if (get(baseTranslator['Element']) and get(baseTranslator['Hidden']['ShowOGMsg']['Element'])) then
                                 client['delay_call'](0.1, function()
                                     C['Notifications']['Send'](col['White'] .. '[' .. col['Red'] .. 'og msg' .. col['White'] .. '] ' , true, fromText, 'translate')
                                 end)
@@ -1670,6 +1670,12 @@ C['UI'] = {
                         C['Notifications']['Send']('Translate Outgoing Messages', ui['get'](e))
                     end
                 },
+                ['ShowOGMsg'] = {
+                    ['Element'] = ui['new_checkbox'](C['Config']['Panel'], C['Config']['Side'], 'Display OG messages [sent by you]', false),
+                    ['Callback'] = function(e)
+                        C['Notifications']['Send']('Display OG Messages', ui['get'](e))
+                    end
+                },
                 ['lblLocal'] = ui['new_label'](C['Config']['Panel'], C['Config']['Side'], 'Local Language [yours]'),
                 ['Local'] = ui['new_textbox'](C['Config']['Panel'], C['Config']['Side'], 'en'),
                 ['lblSource'] = ui['new_label'](C['Config']['Panel'], C['Config']['Side'], 'From Language'),
@@ -1702,6 +1708,7 @@ C['UI'] = {
 
                 ui['set_visible'](base['Incoming']['Element'], bool)
                 ui['set_visible'](base['Outgoing']['Element'], bool)
+                ui['set_visible'](base['ShowOGMsg']['Element'], bool)
 
                 C['Notifications']['Send']('Translator', bool)
             end
@@ -2132,7 +2139,7 @@ C['Events'] = {
                     return true
                 end
 
-                if (ui['get'](C['UI']['Other']['Translator']['Hidden']['Chat']) and not C['Vars']['Translator']['OnCD']) then
+                if (ui['get'](C['UI']['Other']['Translator']['Hidden']['Outgoing']['Element']) and not C['Vars']['Translator']['OnCD']) then
                     if (text:sub(1, 5) == 'say "' and text ~= 'say ""' and text ~= 'say " "') then
                         C['Funcs']['DoChatTranslation'](message, false, true)
                         return true
@@ -2165,27 +2172,3 @@ for cat, entry in pairs(C['UI']) do
 end
 
 C['Funcs']['PrintChangelogs']()
-
-ui.new_button('CONFIG', 'Lua', 'Test', function()
-    local map = globals['mapname']() .. [[\n\n]]
-    local base = C['DB']['Ping']
-    local teamInitials = C['Funcs']['GetTeamInitials']
-    local pingPlyTbl = C['Funcs']['StartPlayerTable']
-    
-    local content = '<@' .. database['read'](base['ID']) .. [[> CS:GO Match Started\n\n]]
-    content = content .. '**Map:** ' .. map
-    content = content .. '**Your Team (' .. teamInitials(true) .. ')**' .. pingPlyTbl(true)
-    content = content .. '**Enemy Team (' .. teamInitials(false) .. ')**' .. pingPlyTbl(false)
-
-    panorama['loadstring']([[
-        $.AsyncWebRequest(']] .. database['read'](base['Webhook']) .. [[',
-        {
-            type: 'POST',
-            data: {
-                'content': ']] .. content .. [['
-            },
-            complete: function (data){
-            }
-        });
-    ]])()
-end)
