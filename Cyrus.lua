@@ -98,7 +98,8 @@ C['ChangeLogs'] = {
     'Added option to enable chat translating [if you don\'t want to translate chat msgs but still use stuff like .tsay] [also should lower rate limit speed]',
     'Changed how discord messages display the profile url [removed the shitty embeds it creates]',
     'Fixed typos',
-    'Fixed shit post not working'
+    'Fixed shit post not working',
+    'Fixed discord messages from looking like shit if there was no one on enemy team'
 }
 
 C['Codes'] = [[
@@ -1305,6 +1306,7 @@ C['Funcs'] = {
         local base = C['Funcs']
         local myTeam = base['GetTeam'](entity['get_local_player']())
         local str = ''
+        local totalPlayers = 0
 
         for i = 0, globals['maxplayers']() do
             local playerTeam = base['GetTeam'](i)
@@ -1322,8 +1324,14 @@ C['Funcs'] = {
                     else
                         str = str .. [[\n\t● ]] .. nick .. ' ([' .. sid64 .. '](' .. sid64Format .. ' )) ' .. '(' .. rank .. ')'
                     end
+
+                    totalPlayers = totalPlayers + 1
                 end
             end
+        end
+
+        if (totalPlayers == 0) then
+            str = str .. [[\n\tn/a]]
         end
         
         return str .. [[\n\n]]
@@ -1367,6 +1375,10 @@ C['Funcs'] = {
             end
 
             str = str .. ' (' .. kills .. '/' .. assists .. '/ ' .. deaths .. ') (mvp: ' .. mvp .. ' score: ' .. score .. ')'
+        end
+
+        if (#arr == 0) then
+            str = str .. [[\n\tn/a]]
         end
         
        return str .. [[\n\n]]
