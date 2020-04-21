@@ -97,7 +97,8 @@ C['ChangeLogs'] = {
     'Removed json library & replaced with skeets inbuilt one',
     'Added option to enable chat translating [if you don\'t want to translate chat msgs but still use stuff like .tsay] [also should lower rate limite speed]',
     'Changed how discord messages display the profile url [removed the shitty embeds it creates]',
-    'Fixed typos'
+    'Fixed typos',
+    'Fixed shit post not working'
 }
 
 C['Colours'] = {
@@ -1556,7 +1557,7 @@ C['UI'] = {
                 local spamType = ui['get']( C['UI']['Spam']['ShitPostList']['Element'])
                 local msg = base['GetShitPost'](spamType)
 
-                if (ui['get'](C['UI']['Other']['Translator']['Hidden']['Chat']) and not C['Vars']['Translator']['OnCD']) then
+                if (ui['get'](C['UI']['Other']['Translator']['Hidden']['Outgoing']['Element']) and not C['Vars']['Translator']['OnCD']) then
                     base['DoChatTranslation'](msg, false)
                 else
                     local chatMode = base['GetChatMode']()
@@ -1726,7 +1727,7 @@ C['Events'] = {
                     local funcs = C['Funcs']
                     local msg = funcs['GetShitPost'](spamType)
 
-                    if (ui['get'](C['UI']['Other']['Translator']['Hidden']['Chat']) and not C['Vars']['Translator']['OnCD']) then
+                    if (ui['get'](C['UI']['Other']['Translator']['Hidden']['Outgoing']['Element']) and not C['Vars']['Translator']['OnCD']) then
                         funcs['DoChatTranslation'](msg, false)
                     else
                         local chatMode = funcs['GetChatMode']()
@@ -1785,7 +1786,7 @@ C['Events'] = {
                         local spamType = C['Chat']['Spam']['Types']['Kill']
                         local msg = funcs['GetShitPost'](spamType)
 
-                        if (ui['get'](C['UI']['Other']['Translator']['Hidden']['Chat']) and not C['Vars']['Translator']['OnCD']) then
+                        if (ui['get'](C['UI']['Other']['Translator']['Hidden']['Outgoing']['Element']) and not C['Vars']['Translator']['OnCD']) then
                             funcs['DoChatTranslation'](msg, false)
                         else
                             client['exec'](chatMode, msg)
@@ -1796,7 +1797,7 @@ C['Events'] = {
                         local spamType = C['Chat']['Spam']['Types']['Death']
                         local msg = funcs['GetShitPost'](spamType)
 
-                        if (ui['get'](C['UI']['Other']['Translator']['Hidden']['Chat']) and not C['Vars']['Translator']['OnCD']) then
+                        if (ui['get'](C['UI']['Other']['Translator']['Hidden']['Outgoing']['Element']) and not C['Vars']['Translator']['OnCD']) then
                             funcs['DoChatTranslation'](msg, false)
                         else
                             client['exec'](chatMode, msg)
