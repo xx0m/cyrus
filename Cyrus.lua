@@ -18,7 +18,7 @@ C['JS']['Funcs'] = panorama['loadstring']([[
 ]])()
 
 C['Libs'] = {
-    ['ChatPrint'] = {
+        ['ChatPrint'] = {
         -- credits to Aviartia for Chat Print https://github.com/Aviarita/lua-scripts/blob/master/hudchat/print_to_hudchat.lua
         ['Initialise'] = function()
             local ffi = require("ffi")
@@ -1558,7 +1558,7 @@ C['UI'] = {
                 local msg = base['GetShitPost'](spamType)
 
                 if (ui['get'](C['UI']['Other']['Translator']['Hidden']['Outgoing']['Element']) and not C['Vars']['Translator']['OnCD']) then
-                    base['DoChatTranslation'](msg, false)
+                   base['DoChatTranslation'](msg, false, true)
                 else
                     local chatMode = base['GetChatMode']()
                     client['exec'](chatMode, msg)
@@ -1728,7 +1728,7 @@ C['Events'] = {
                     local msg = funcs['GetShitPost'](spamType)
 
                     if (ui['get'](C['UI']['Other']['Translator']['Hidden']['Outgoing']['Element']) and not C['Vars']['Translator']['OnCD']) then
-                        funcs['DoChatTranslation'](msg, false)
+                        base['DoChatTranslation'](msg, false, true)
                     else
                         local chatMode = funcs['GetChatMode']()
                         client['exec'](chatMode, msg)
@@ -1787,7 +1787,7 @@ C['Events'] = {
                         local msg = funcs['GetShitPost'](spamType)
 
                         if (ui['get'](C['UI']['Other']['Translator']['Hidden']['Outgoing']['Element']) and not C['Vars']['Translator']['OnCD']) then
-                            funcs['DoChatTranslation'](msg, false)
+                            funcs['DoChatTranslation'](msg, false, true)
                         else
                             client['exec'](chatMode, msg)
                         end
@@ -1798,7 +1798,7 @@ C['Events'] = {
                         local msg = funcs['GetShitPost'](spamType)
 
                         if (ui['get'](C['UI']['Other']['Translator']['Hidden']['Outgoing']['Element']) and not C['Vars']['Translator']['OnCD']) then
-                            funcs['DoChatTranslation'](msg, false)
+                            funcs['DoChatTranslation'](msg, false, true)
                         else
                             client['exec'](chatMode, msg)
                         end
