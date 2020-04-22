@@ -92,14 +92,8 @@ end
 
 C['ChangeLogs'] = {
     '',
-    '===== 1.10 (Apr 21 2020) =====',
-    'Updated for latest update',
-    'Removed json library & replaced with skeets inbuilt one',
-    'Added option to enable chat translating [if you don\'t want to translate chat msgs but still use stuff like .tsay] [also should lower rate limit speed]',
-    'Changed how discord messages display the profile url [removed the shitty embeds it creates]',
-    'Fixed typos',
-    'Fixed shit post not working',
-    'Fixed discord messages from looking like shit if there was no one on enemy team'
+    '===== 1.11 (Apr 23 2020) =====',
+    'Removed changelogs printing on load [use cyrus_changelogs to view them]'
 }
 
 C['Codes'] = [[
@@ -411,6 +405,12 @@ C['ConCmd'] = {
         ['translate_codes'] = {
             ['Func'] = function(tab)
                 print(C['Codes'])
+            end,
+            ['Usage'] = ''
+        },
+        ['changelogs'] = {
+            ['Func'] = function(tab)
+                C['Funcs']['PrintChangelogs']()
             end,
             ['Usage'] = ''
         }
@@ -2258,4 +2258,4 @@ for cat, entry in pairs(C['UI']) do
     end
 end
 
-C['Funcs']['PrintChangelogs']()
+--C['Funcs']['PrintChangelogs']()
