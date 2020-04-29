@@ -68,8 +68,8 @@ C['Libs'] = {
 
 			local match = C['FindSig']("client_panorama.dll", signature_gHud) or error("sig1 not found") -- returns void***
 			local char_match = ffi.cast("char*", match) + 1 
-            local hud = ffi.cast("void**", char_match)[0] or error("hud is nil") -- returns void**
-            
+			local hud = ffi.cast("void**", char_match)[0] or error("hud is nil") -- returns void**
+
 			match = C['FindSig']("client_panorama.dll", signature_FindElement) or error("FindHudElement not found")
 			local find_hud_element = ffi.cast("FindHudElement_t", match)
 			local hudchat = find_hud_element(hud, "CHudChat") or error("CHudChat not found")
@@ -1477,6 +1477,10 @@ C['Funcs'] = {
 
 C['UI'] = {
 	['Utilities'] = {
+		['lblStart'] = {
+			['Element'] = C['Label'](C['Config']['Panel'], C['Config']['Side'], '------------------[Start Cyrus]----------------'),
+			['Callback'] = function(e) end
+		},
 		['Notification Type'] = {
 			['Element'] = C['Multiselect'](C['Config']['Panel'], C['Config']['Side'], 'Notification Type', {'Chat Print', 'Console'}),
 			['Callback'] = function(e)
@@ -1828,7 +1832,11 @@ C['UI'] = {
 
 				C['Notifications']['Send']('Translator', bool)
 			end
-		}
+		},
+		['lblEnd'] = {
+			['Element'] = C['Label'](C['Config']['Panel'], C['Config']['Side'], '-------------------[End Cyrus]-----------------'),
+			['Callback'] = function(e) end
+		},
 	}
 }
 
