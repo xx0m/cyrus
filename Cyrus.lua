@@ -1744,7 +1744,7 @@ C['UI'] = {
 								local wins = funcs['GetCompWins'](i)
 								local rank = funcs['GetCompRank'](i)
 
-								local msg =  C['Format']('%s has % wins (%s)', nick, wins, rank)
+								local msg =  C['Format']('%s has %s wins (%s)', nick, wins, rank)
 								local msgChat = C['Format']('%s%s%s has %s%s wins (%s%s%s)', col['Gold'], nick, col['White'], col['Purple'], wins, col['White'], col['Red'], rank, col['White'])
 
 								if (hasValue(tab,'Chat Msg')) then
