@@ -86,8 +86,6 @@ C['Libs'] = {
 	}
 }
 
---C['Libs']['URLEncoder']['Encode']
-
 for _, lib in pairs(C['Libs']) do
 	lib['Initialise']()
 end
