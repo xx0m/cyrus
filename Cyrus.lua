@@ -1,6 +1,36 @@
 local C = {}
 
---client['exec']('clear')
+C['Get'] = ui['get']
+C['Set'] = ui['set']
+C['SetVisible'] = ui['set_visible']
+C['SetCallback'] = ui['set_callback']
+C['Button'] = ui['new_button']
+C['Slider'] = ui['new_slider']
+C['Combobox'] = ui['new_combobox']
+C['Textbox'] = ui['new_textbox']
+C['Checkbox'] = ui['new_checkbox']
+C['Multiselect'] = ui['new_multiselect']
+C['Hotkey'] = ui['new_hotkey']
+C['Label'] = ui['new_label']
+
+C['Delay'] = client['delay_call']
+C['RandInt'] = client['random_int']
+C['RegisterEvent'] = client['set_event_callback']
+C['Exec'] = client['exec']
+C['FindSig'] = client['find_signature']
+C['ColLog'] = client['color_log']
+C['UIDToEntIndex'] = client['userid_to_entindex']
+
+C['GetProp'] = entity['get_prop']
+C['Me'] = entity['get_local_player']
+C['PlayerResource'] = entity['get_player_resource']
+C['GetName'] = entity['get_player_name']
+C['GetClassName'] = entity['get_classname']
+C['SID64'] = entity['get_steam64']
+C['IsEnemy'] = entity['is_enemy']
+C['GetAllEnts'] = entity['get_all']
+
+--C['Exec']('clear')
 
 C['Config'] = {
 	['Panel'] = 'LUA',
@@ -14,6 +44,9 @@ C['JS']['Funcs'] = panorama['loadstring']([[
 	return {
 		GetLastTranslation: function() {
 			return cyrus_last_translation;
+		},
+		Encode: function(text) {
+			return encodeURI(text);
 		}
 	}
 ]])()
@@ -33,11 +66,11 @@ C['Libs'] = {
 			local signature_gHud = "\xB9\xCC\xCC\xCC\xCC\x88\x46\x09"
 			local signature_FindElement = "\x55\x8B\xEC\x53\x8B\x5D\x08\x56\x57\x8B\xF9\x33\xF6\x39\x77\x28"
 
-			local match = client.find_signature("client_panorama.dll", signature_gHud) or error("sig1 not found") -- returns void***
+			local match = C['FindSig']("client_panorama.dll", signature_gHud) or error("sig1 not found") -- returns void***
 			local char_match = ffi.cast("char*", match) + 1 
             local hud = ffi.cast("void**", char_match)[0] or error("hud is nil") -- returns void**
             
-			match = client.find_signature("client_panorama.dll", signature_FindElement) or error("FindHudElement not found")
+			match = C['FindSig']("client_panorama.dll", signature_FindElement) or error("FindHudElement not found")
 			local find_hud_element = ffi.cast("FindHudElement_t", match)
 			local hudchat = find_hud_element(hud, "CHudChat") or error("CHudChat not found")
 			local chudchat_vtbl = hudchat[0] or error("CHudChat instance vtable is nil")
@@ -50,31 +83,10 @@ C['Libs'] = {
 
 			C['Libs']['ChatPrint']['Send'] = Send
 		end
-	},
-	['URLEncoder'] = {
-		-- from https://gist.github.com/qpSHiNqp/84cda00abbba350f20a2
-		['Initialise'] = function()
-			C['Libs']['URLEncoder']['Encode'] = function(str)
-				if (not str) then
-					return str
-				end
-	
-				str = string.gsub (str, "\n", "\r\n")
-				str = string.gsub (str, "[^%w.%-_~]",
-					function (c) return C['Format'] ("%%%02X", string.byte(c)) end)
-	
-				return str
-			end
-
-			C['Libs']['URLEncoder']['Decode'] = function(str)
-				str = string.gsub(str, "%%([0-9a-fA-F][0-9a-fA-F])",
-					function (c) return string.char(tonumber("0x" .. c)) end)
-				str = string.gsub (str, "\n", "\r\n")
-				return str
-			end
-		end
 	}
 }
+
+--C['Libs']['URLEncoder']['Encode']
 
 for _, lib in pairs(C['Libs']) do
 	lib['Initialise']()
@@ -228,7 +240,7 @@ C['Notifications'] = {
 
 		local arg1, arg2, arg3 = ...
 
-		local tab = ui['get'](C['UI']['Utilities']['Notification Type']['Element'])
+		local tab = C['Get'](C['UI']['Utilities']['Notification Type']['Element'])
 		local hasValue = C['Funcs']['table.HasValue']
 
 		if (not ...) then
@@ -271,7 +283,7 @@ C['Notifications'] = {
 		local red = col['Red']
 		local orange = col['Orange']
 
-		local log = client['color_log']
+		local log = C['ColLog']
 
 		log(white['r'], white['g'], white['b'], '[\0')
 		log(blue['r'], blue['g'], blue['b'], 'Cyrus\0')
@@ -296,7 +308,7 @@ C['Notifications'] = {
 		local red = col['Red']
 		local orange = col['Orange']
 
-		local log = client['color_log']
+		local log = C['ColLog']
 
 		if (bool) then
 			log(white['r'], white['g'], white['b'], '[\0')
@@ -386,7 +398,7 @@ C['ConCmd'] = {
 		},
 		['tsay'] = {
 			['Func'] = function(tab)
-				if (ui['get'](C['UI']['Other']['Translator']['Element'])) then
+				if (C['Get'](C['UI']['Other']['Translator']['Element'])) then
 					if (not C['Vars']['Translator']['OnCD']) then
 						if (tab[2] == nil or tab[2] == '') then
 							C['Notifications']['ConsoleLog']('Invalid use, exmaple usage: cyrus_tsay Hello World!', false, '', '')
@@ -491,11 +503,11 @@ C['Chat'] = {
 		['buy'] = {
 			['Func'] = function(args, speaker)
 				local speakerTeam =  C['Funcs']['GetTeam'](speaker)
-				local me = entity['get_local_player']()
+				local me = C['Me']()
 				local myTeam =  C['Funcs']['GetTeam'](me)
 
 				if (speakerTeam == myTeam and speaker ~= me) then
-					if (ui['get'](C['UI']['MM']['AFK Buy-Drop']['Element'])) then
+					if (C['Get'](C['UI']['MM']['AFK Buy-Drop']['Element'])) then
 						if (args) then
 							local col = args[2]
 							local wep = args[3]
@@ -504,19 +516,19 @@ C['Chat'] = {
 								if (#wep >= 2 and #wep <= 8) then
 									local base = C['Vars']['BuyBot']['WeaponData'][wep]
 									local mode = C['Funcs']['GetChatMode']()
-									local cmd = client['exec']
+									local cmd = C['Exec']
 
 									if (base) then
-										local money = C['Funcs']['GetMoney'](entity['get_local_player']())
+										local money = C['Funcs']['GetMoney'](C['Me']())
 										local ent, cost = base['ent'], base['cost']
 
 										if (money >= cost) then
 											cmd('buy ', ent)
 
-											client['delay_call'](1, function()
+											C['Delay'](1, function()
 												cmd('slot0')
 
-												client['delay_call'](0, function()
+												C['Delay'](0, function()
 													cmd('drop')
 												end)
 											end)
@@ -1159,7 +1171,7 @@ C['Funcs'] = {
 		local red = col['Red']
 		local orange = col['Orange']
 
-		local log = client['color_log']
+		local log = C['ColLog']
 		
 		log(white['r'], white['g'], white['b'], '[\0')
 		log(blue['r'], blue['g'], blue['b'], 'Cyrus\0')
@@ -1194,7 +1206,7 @@ C['Funcs'] = {
 		end
 	end,
 	['table.Random'] = function(table)
-		return table[ client['random_int'](1, #table) ]
+		return table[ C['RandInt'](1, #table) ]
 	end,
 	['table.HasValue'] = function(table, value)
 		if (type(table) ~= 'table') then
@@ -1225,10 +1237,10 @@ C['Funcs'] = {
 		return ret
 	end,
 	['GetPlayerProperty'] = function(property, index)
-		return entity['get_prop'](entity['get_player_resource'](), property, index)
+		return C['GetProp'](C['PlayerResource'](), property, index)
 	end,
 	['GetProperty'] = function(property, index, ...)
-		return (... and entity['get_prop'](index, property, ...) or entity['get_prop'](index, property))
+		return (... and C['GetProp'](index, property, ...) or C['GetProp'](index, property))
 	end,
 	['IsConnected'] = function(index)
 		return C['Funcs']['GetPlayerProperty']('m_bConnected', index) == 1
@@ -1251,10 +1263,10 @@ C['Funcs'] = {
 		return (string['find'](globals['mapname'](), 'dz') and (C['Ranks']['DZ'][rankID] or 'unranked') or (C['Ranks']['MM'][rankID] or 'unranked'))
 	end,
 	['GetChatMode'] = function()
-		return (ui['get'](C['UI']['Utilities']['Team Only']['Element']) and 'say_team' or 'say') .. ' '
+		return (C['Get'](C['UI']['Utilities']['Team Only']['Element']) and 'say_team' or 'say') .. ' '
 	end,
 	['GetChatDelay'] = function(i)
-		return 1 * (i * 0.80) + (C['Funcs']['GetPlayerProperty']('m_iPing', entity['get_local_player']()) * 0.01) -- these doubles come out my ass but seem to be stable
+		return 1 * (i * 0.80) + (C['Funcs']['GetPlayerProperty']('m_iPing', C['Me']()) * 0.01) -- these doubles come out my ass but seem to be stable
 	end,
 	['GetMoney'] = function(index)
 		return C['Funcs']['GetProperty']('m_iAccount', index)
@@ -1264,7 +1276,7 @@ C['Funcs'] = {
 	end,
 	['HasTaser'] = function(ent)
 		for i = 0, 9 do
-			if (entity['get_classname'](C['Funcs']['GetProperty']('m_hMyWeapons', ent, i)) == 'CWeaponTaser') then
+			if (C['GetClassName'](C['Funcs']['GetProperty']('m_hMyWeapons', ent, i)) == 'CWeaponTaser') then
 				return true
 			end
 		end
@@ -1289,7 +1301,7 @@ C['Funcs'] = {
 		return C['ConCmd']['Cmds'][text:lower()]
 	end,
 	['GetTeamInitials'] = function(bool)
-		local myTeam = C['Funcs']['GetTeam'](entity['get_local_player']())
+		local myTeam = C['Funcs']['GetTeam'](C['Me']())
 		local enemyTeam = (myTeam == 3) and 2 or 3
 
 		if (bool) then
@@ -1299,7 +1311,7 @@ C['Funcs'] = {
 		end
 	end,
 	['GetTeamRounds'] = function(bool)
-		local myTeam = C['Funcs']['GetTeam'](entity['get_local_player']())
+		local myTeam = C['Funcs']['GetTeam'](C['Me']())
 		local enemyTeam = (myTeam == 3) and 2 or 3
 		local gameData = C['P']['GameStateAPI']['GetScoreDataJSO']()['teamdata']
 		local team = ''
@@ -1314,7 +1326,7 @@ C['Funcs'] = {
 	end,
 	['StartPlayerTable'] = function(bool)
 		local base = C['Funcs']
-		local myTeam = base['GetTeam'](entity['get_local_player']())
+		local myTeam = base['GetTeam'](C['Me']())
 		local str = ''
 		local totalPlayers = 0
 
@@ -1323,9 +1335,9 @@ C['Funcs'] = {
 
 			if ((playerTeam == 2 or playerTeam == 3) and base['IsConnected'](i)) then
 				if (myTeam == playerTeam and bool) or (myTeam ~= playerTeam and not bool) then
-					local nick = entity['get_player_name'](i)
+					local nick = C['GetName'](i)
 					local rank = base['GetCompRank'](i)
-					local sid64 = base['SteamID3To64'](entity['get_steam64'](i))
+					local sid64 = base['SteamID3To64'](C['SID64'](i))
 					local sid64Format = C['Format']('https://steamcommunity.com/profiles/%s', sid64)
 					local isBot = base['IsBot'](i)
 
@@ -1353,7 +1365,7 @@ C['Funcs'] = {
 
 		for i = 0, globals['maxplayers']() do
 			local playerTeam = base['GetTeam'](i)
-			local myTeam = base['GetTeam'](entity['get_local_player']())
+			local myTeam = base['GetTeam'](C['Me']())
 
 			if ((playerTeam == 2 or playerTeam == 3) and base['IsConnected'](i)) then
 				local score = base['GetPlayerProperty']('m_iScore', i)
@@ -1368,9 +1380,9 @@ C['Funcs'] = {
 
 		for _, v in pairs(arr) do
 			local i = v.player
-			local nick = entity['get_player_name'](i)
+			local nick = C['GetName'](i)
 			local rank = base['GetCompRank'](i)
-			local sid64 = base['SteamID3To64'](entity['get_steam64'](i))
+			local sid64 = base['SteamID3To64'](C['SID64'](i))
 			local sid64Format = C['Format']('https://steamcommunity.com/profiles/%s', sid64)
 			local isBot = base['IsBot'](i)
 			local kills = base['GetPlayerProperty']('m_iKills', i)
@@ -1401,13 +1413,12 @@ C['Funcs'] = {
 		local baseCD = C['Vars']['Translator']
 
 		if (not baseCD['OnCD']) then
-			local get = ui['get']
+			local get = C['Get']
 			local col = C['Colours']
 			local baseTranslator = C['UI']['Other']['Translator']
 			local baseHidden = baseTranslator['Hidden']
 			local url = C['Format']('https://translate.googleapis.com/translate_a/single?client=gtx&sl=%s&tl=', get(baseHidden['Source']))
 			local chatMode = (teamChat and 'say_team' or C['Funcs']['GetChatMode']())
-
 			local languageToTranslateTo = toLang or get(baseHidden['To'])
 
 			if (bool) then
@@ -1416,16 +1427,16 @@ C['Funcs'] = {
 				url = C['Format']('%s%s', url, languageToTranslateTo)
 			end
 
-			url = C['Format']('%s&dt=t&q=%s', url, C['Libs']['URLEncoder']['Encode'](text))
+			url = C['Format']('%s&dt=t&q=%s', url, C['JS']['Funcs']['Encode'](text))
 
-			if (ui['get'](baseTranslator['Hidden']['Incoming']['Element']) or me) then
+			if (C['Get'](baseTranslator['Hidden']['Incoming']['Element']) or me) then
 				panorama['loadstring'](C['Format']([[
 					$.AsyncWebRequest('%s', {type: 'GET', complete: function(c) {
 						cyrus_last_translation = c;
 					}});
 				]], url))()
 
-				client['delay_call'](0.6, function()
+				C['Delay'](1, function()
 					local response = C['JS']['Funcs'].GetLastTranslation()
 					local white = col['White']
 
@@ -1439,21 +1450,21 @@ C['Funcs'] = {
 						if (detectedLang ~= get(baseHidden['Local']) and bool) then
 							C['Notifications']['Send'](C['Format']('%s[%s%s%s] ', white, col['Red'], detectedLang, white), true, translatedText, 'translate')
 						elseif (me) then
-							client['exec'](chatMode, translatedText)
+							C['Exec'](chatMode, translatedText)
 
 							if (get(baseTranslator['Element']) and get(baseTranslator['Hidden']['ShowOGMsg']['Element'])) then
-								client['delay_call'](0.1, function()
+								C['Delay'](0.1, function()
 									C['Notifications']['Send'](C['Format']('%s[%sog msg%s] ', white, col['Red'], white) , true, fromText, 'translate')
 								end)
 							end
 						end
 					elseif (me) then
-						client['exec'](chatMode, text)
-						client['delay_call'](0.1, function()
+						C['Exec'](chatMode, text)
+						C['Delay'](0.1, function()
 							C['Notifications']['Send'](C['Format']('%s[%stranslator%s] ', white, col['Red'], white), true, 'You\'re rate limited by google, sending normal message.', 'translate')
 						end)
 
-						ui['set'](baseTranslator['Hidden']['Outgoing']['Element'], false)
+						C['Set'](baseTranslator['Hidden']['Outgoing']['Element'], false)
 					end
 				end)
 			end
@@ -1467,11 +1478,11 @@ C['Funcs'] = {
 C['UI'] = {
 	['Utilities'] = {
 		['Notification Type'] = {
-			['Element'] = ui['new_multiselect'](C['Config']['Panel'], C['Config']['Side'], 'Notification Type', {'Chat Print', 'Console'}),
+			['Element'] = C['Multiselect'](C['Config']['Panel'], C['Config']['Side'], 'Notification Type', {'Chat Print', 'Console'}),
 			['Callback'] = function(e)
 				local msg = ''
 				local col = C['Colours']
-				local tab = ui['get'](e)
+				local tab = C['Get'](e)
 
 				if (#tab > 0) then
 					for _, v in pairs(tab) do
@@ -1485,71 +1496,71 @@ C['UI'] = {
 			end
 		},
 		['AFK Mode'] = {
-			['Element'] = ui['new_checkbox'](C['Config']['Panel'], C['Config']['Side'], 'AFK Mode'),
+			['Element'] = C['Checkbox'](C['Config']['Panel'], C['Config']['Side'], 'AFK Mode'),
 			['Callback'] = function(e)
-				local bool = ui['get'](e)
-				client['exec']((bool and '+' or '-') .. 'duck')
+				local bool = C['Get'](e)
+				C['Exec']((bool and '+' or '-') .. 'duck')
 
 				C['Notifications']['Send']('AFK Mode', bool)
 			end
 		},
 		['Radio Spam'] = {
-			['Element'] = ui['new_checkbox'](C['Config']['Panel'], C['Config']['Side'], 'Radio Spam'),
+			['Element'] = C['Checkbox'](C['Config']['Panel'], C['Config']['Side'], 'Radio Spam'),
 			['Hidden'] = {
-				['Speed'] = ui['new_slider'](C['Config']['Panel'], C['Config']['Side'], 'Spam Delay', 50, 150, 70, true, '%')
+				['Speed'] = C['Slider'](C['Config']['Panel'], C['Config']['Side'], 'Spam Delay', 50, 150, 70, true, '%')
 			},
 			['Callback'] = function(e)
-				local bool = ui['get'](e)
-				ui['set_visible'](C['UI']['Utilities']['Radio Spam']['Hidden']['Speed'], bool)
+				local bool = C['Get'](e)
+				C['SetVisible'](C['UI']['Utilities']['Radio Spam']['Hidden']['Speed'], bool)
 				C['Notifications']['Send']('Radio Spam', bool)
 			end
 		},
 		['Vote Revealer'] = {
-			['Element'] = ui['new_checkbox'](C['Config']['Panel'], C['Config']['Side'], 'Vote Revealer'),
+			['Element'] = C['Checkbox'](C['Config']['Panel'], C['Config']['Side'], 'Vote Revealer'),
 			['Callback'] = function(e)
-				C['Notifications']['Send']('Vote Revealer', ui['get'](e))
+				C['Notifications']['Send']('Vote Revealer', C['Get'](e))
 			end
 		},
 		['Team Only'] = {
-			['Element'] = ui['new_checkbox'](C['Config']['Panel'], C['Config']['Side'], 'Team Only [chat msgs]'),
+			['Element'] = C['Checkbox'](C['Config']['Panel'], C['Config']['Side'], 'Team Only [chat msgs]'),
 			['Callback'] = function(e)
-				C['Notifications']['Send']('Team Only', ui['get'](e))
+				C['Notifications']['Send']('Team Only', C['Get'](e))
 			end
 		},
 		['Use Spam'] = {
-			['Element'] = ui['new_checkbox'](C['Config']['Panel'], C['Config']['Side'], 'Use Spam'),
+			['Element'] = C['Checkbox'](C['Config']['Panel'], C['Config']['Side'], 'Use Spam'),
 			['Hidden'] = {
-				['Speed'] = ui['new_slider'](C['Config']['Panel'], C['Config']['Side'], 'Spam Delay', 1, 100, 5, true, '%'),
-				['Key'] = ui['new_hotkey'](C['Config']['Panel'], C['Config']['Side'], 'Spam Key', true)
+				['Speed'] = C['Slider'](C['Config']['Panel'], C['Config']['Side'], 'Spam Delay', 1, 100, 5, true, '%'),
+				['Key'] = C['Hotkey'](C['Config']['Panel'], C['Config']['Side'], 'Spam Key', true)
 			},
 			['Callback'] = function(e)
-				local bool = ui['get'](e)
-				ui['set_visible'](C['UI']['Utilities']['Use Spam']['Hidden']['Speed'], bool)
-				ui['set_visible'](C['UI']['Utilities']['Use Spam']['Hidden']['Key'], bool)
+				local bool = C['Get'](e)
+				C['SetVisible'](C['UI']['Utilities']['Use Spam']['Hidden']['Speed'], bool)
+				C['SetVisible'](C['UI']['Utilities']['Use Spam']['Hidden']['Key'], bool)
 				C['Notifications']['Send']('Use Spam', bool)
 			end
 		},
 		['Plasma Shot'] = {
-			['Element'] = ui['new_checkbox'](C['Config']['Panel'], C['Config']['Side'], 'Plasma Shot'),
+			['Element'] = C['Checkbox'](C['Config']['Panel'], C['Config']['Side'], 'Plasma Shot'),
 			['Hidden'] = {
-				['Key'] = ui['new_hotkey'](C['Config']['Panel'], C['Config']['Side'], 'Key', true)
+				['Key'] = C['Hotkey'](C['Config']['Panel'], C['Config']['Side'], 'Key', true)
 			},
 			['Callback'] = function(e)
-				local bool = ui['get'](e)
-				ui['set_visible'](C['UI']['Utilities']['Plasma Shot']['Hidden']['Key'], bool)
+				local bool = C['Get'](e)
+				C['SetVisible'](C['UI']['Utilities']['Plasma Shot']['Hidden']['Key'], bool)
 				C['Notifications']['Send']('Plasma Shot', bool)
 			end
 		},
 		['Auto Leave'] = {
-			['Element'] = ui['new_checkbox'](C['Config']['Panel'], C['Config']['Side'], 'Auto DC [end of game]'),
+			['Element'] = C['Checkbox'](C['Config']['Panel'], C['Config']['Side'], 'Auto DC [end of game]'),
 			['Callback'] = function(e)
-				C['Notifications']['Send']('Auto DC', ui['get'](e))
+				C['Notifications']['Send']('Auto DC', C['Get'](e))
 			end
 		},
 		['Start Ping'] = {
-			['Element'] = ui['new_checkbox'](C['Config']['Panel'], C['Config']['Side'], 'Discord Ping [match start]'),
+			['Element'] = C['Checkbox'](C['Config']['Panel'], C['Config']['Side'], 'Discord Ping [match start]'),
 			['Callback'] = function(e)
-				local bool = ui['get'](e)
+				local bool = C['Get'](e)
 
 				local base = C['DB']['Ping']
 				local cmdBase = C['ConCmd']['Cmds']
@@ -1565,16 +1576,16 @@ C['UI'] = {
 						C['Notifications']['Send']('', not bool, C['Format']('Type cyrus_webhook %s in the console.', cmdBase['webhook']['Usage']), 'err')
 					end
 
-					ui['set'](e, false)
+					C['Set'](e, false)
 				else
 					C['Notifications']['Send']('Discord Match Start Ping', bool)
 				end
 			end
 		},
 		['End Ping'] = {
-			['Element'] = ui['new_checkbox'](C['Config']['Panel'], C['Config']['Side'], 'Discord Ping [match end]'),
+			['Element'] = C['Checkbox'](C['Config']['Panel'], C['Config']['Side'], 'Discord Ping [match end]'),
 			['Callback'] = function(e)
-				local bool = ui['get'](e)
+				local bool = C['Get'](e)
 
 				local base = C['DB']['Ping']
 				local cmdBase = C['ConCmd']['Cmds']
@@ -1590,7 +1601,7 @@ C['UI'] = {
 						C['Notifications']['Send']('', not bool, C['Format']('Type cyrus_webhook_end %s in the console.', cmdBase['webhook_end']['Usage']), 'err')
 					end
 
-					ui['set'](e, false)
+					C['Set'](e, false)
 				else
 					C['Notifications']['Send']('Discord Match End Message', bool)
 				end
@@ -1599,14 +1610,14 @@ C['UI'] = {
 	},
 	['Spam'] = {
 		['Type'] = {
-			['Element'] = ui['new_combobox'](C['Config']['Panel'], C['Config']['Side'], 'Spam Type', {'-', 'Kill', 'Death', 'Chat'}),
+			['Element'] = C['Combobox'](C['Config']['Panel'], C['Config']['Side'], 'Spam Type', {'-', 'Kill', 'Death', 'Chat'}),
 			['Hidden'] = {
 				['Messages'] = {
-					['Element'] = ui['new_combobox'](C['Config']['Panel'], C['Config']['Side'], 'Message', {'Off', 'Insult', 'Insult (Caps)', 'Cancer Strike', 'Super Cancer Strike', 'Annoying Question'}),
+					['Element'] = C['Combobox'](C['Config']['Panel'], C['Config']['Side'], 'Message', {'Off', 'Insult', 'Insult (Caps)', 'Cancer Strike', 'Super Cancer Strike', 'Annoying Question'}),
 					['Callback'] = function(e)
 						local base = C['UI']['Spam']['Type']
-						local type = ui['get'](base['Element'])
-						local msg = ui['get'](base['Hidden']['Messages']['Element'])
+						local type = C['Get'](base['Element'])
+						local msg = C['Get'](base['Hidden']['Messages']['Element'])
 						local chatBase = C['Chat']['Spam']['Types']
 
 						local bool = (msg == 'Off')
@@ -1626,80 +1637,80 @@ C['UI'] = {
 						end
 					end
 				},
-				['Speed'] = ui['new_slider'](C['Config']['Panel'], C['Config']['Side'], 'Spam Delay', 5, 150, 70, true, '%'),
+				['Speed'] = C['Slider'](C['Config']['Panel'], C['Config']['Side'], 'Spam Delay', 5, 150, 70, true, '%'),
 			},
 			['Callback'] = function(e)
-				local type = ui['get'](e)
+				local type = C['Get'](e)
 				local bool = (type == '-')
 				local base = C['UI']['Spam']['Type']['Hidden']
 				local msgs = base['Messages']['Element']
 				local speed = base['Speed']
 
 				if (bool) then
-					ui['set_visible'](msgs, not bool)
-					ui['set_visible'](speed, type == 'Chat')
+					C['SetVisible'](msgs, not bool)
+					C['SetVisible'](speed, type == 'Chat')
 				else
-					ui['set_visible'](speed, type == 'Chat')
-					ui['set_visible'](msgs, not bool)
+					C['SetVisible'](speed, type == 'Chat')
+					C['SetVisible'](msgs, not bool)
 
-					ui['set'](msgs, C['Chat']['Spam']['Types'][ ui['get'](C['UI']['Spam']['Type']['Element']) ])
+					C['Set'](msgs, C['Chat']['Spam']['Types'][ C['Get'](C['UI']['Spam']['Type']['Element']) ])
 				end
 			end
 		},
 		['ShitPostList'] = {
-			['Element'] = ui['new_combobox'](C['Config']['Panel'], C['Config']['Side'], 'Shitpost List', {'Insult', 'Insult (Caps)', 'Cancer Strike', 'Super Cancer Strike', 'Annoying Question'}),
+			['Element'] = C['Combobox'](C['Config']['Panel'], C['Config']['Side'], 'Shitpost List', {'Insult', 'Insult (Caps)', 'Cancer Strike', 'Super Cancer Strike', 'Annoying Question'}),
 			['Callback'] = function(e)
-				local type = ui['get'](e)
+				local type = C['Get'](e)
 				C['Notifications']['Send']('Shit Post', true, type)
 			end 
 		},
 		['Execute'] = {
-			['Element'] = ui['new_button'](C['Config']['Panel'], C['Config']['Side'], 'Execute Shitpost', function(e) return end),
+			['Element'] = C['Button'](C['Config']['Panel'], C['Config']['Side'], 'Execute Shitpost', function(e) return end),
 			['Callback'] = function(e)
 				local base = C['Funcs']
-				local spamType = ui['get']( C['UI']['Spam']['ShitPostList']['Element'])
+				local spamType = C['Get']( C['UI']['Spam']['ShitPostList']['Element'])
 				local msg = base['GetShitPost'](spamType)
 
-				if (ui['get'](C['UI']['Other']['Translator']['Hidden']['Outgoing']['Element']) and not C['Vars']['Translator']['OnCD']) then
+				if (C['Get'](C['UI']['Other']['Translator']['Hidden']['Outgoing']['Element']) and not C['Vars']['Translator']['OnCD']) then
 				   base['DoChatTranslation'](msg, false, true)
 				else
 					local chatMode = base['GetChatMode']()
-					client['exec'](chatMode, msg)
+					C['Exec'](chatMode, msg)
 				end
 			end 
 		}
 	},
 	['MM'] = {
 		['AFK Buy-Drop'] = {
-			['Element'] = ui['new_checkbox'](C['Config']['Panel'], C['Config']['Side'], 'AFK Buy-Drop [!buy xx]'),
+			['Element'] = C['Checkbox'](C['Config']['Panel'], C['Config']['Side'], 'AFK Buy-Drop [!buy xx]'),
 			['Callback'] = function(e)
-				C['Notifications']['Send']('AFK Buy-Drop', ui['get'](e))
+				C['Notifications']['Send']('AFK Buy-Drop', C['Get'](e))
 			end
 		},
 		['Damage Logs'] = {
-			['Element'] = ui['new_checkbox'](C['Config']['Panel'], C['Config']['Side'], 'Damage Logs [against enemy team]'),
+			['Element'] = C['Checkbox'](C['Config']['Panel'], C['Config']['Side'], 'Damage Logs [against enemy team]'),
 			['Callback'] = function(e)
-				C['Notifications']['Send']('Damage Logs', ui['get'](e))
+				C['Notifications']['Send']('Damage Logs', C['Get'](e))
 			end
 		},
 		['TD Notifier'] = {
-			['Element'] = ui['new_checkbox'](C['Config']['Panel'], C['Config']['Side'], 'Team Damage Notifications [ur team only]'),
+			['Element'] = C['Checkbox'](C['Config']['Panel'], C['Config']['Side'], 'Team Damage Notifications [ur team only]'),
 			['Callback'] = function(e)
-				C['Notifications']['Send']('Team Damage Notifier', ui['get'](e))
+				C['Notifications']['Send']('Team Damage Notifier', C['Get'](e))
 			end
 		},
 		['Target Team'] = {
-			['Element'] = ui['new_combobox'](C['Config']['Panel'], C['Config']['Side'], 'Target Team [rank dump]', {'Enemy', 'Team', 'All'}),
+			['Element'] = C['Combobox'](C['Config']['Panel'], C['Config']['Side'], 'Target Team [rank dump]', {'Enemy', 'Team', 'All'}),
 			['Callback'] = function(e)
-				C['Notifications']['Send']('Target Team', true, ui['get'](e))
+				C['Notifications']['Send']('Target Team', true, C['Get'](e))
 			end
 		},
 		['Notification Type'] = {
-			['Element'] = ui['new_multiselect'](C['Config']['Panel'], C['Config']['Side'], 'Notification Type [rank dump]', {'Chat Print', 'Chat Msg', 'Party Chat'}),
+			['Element'] = C['Multiselect'](C['Config']['Panel'], C['Config']['Side'], 'Notification Type [rank dump]', {'Chat Print', 'Chat Msg', 'Party Chat'}),
 			['Callback'] = function(e)
 				local msg = ''
 				local col = C['Colours']
-				local tab = ui['get'](e)
+				local tab = C['Get'](e)
 
 				if (#tab > 0) then
 					for _, v in pairs(tab) do
@@ -1713,15 +1724,15 @@ C['UI'] = {
 			end
 		},
 		['Rank Dump'] = {
-			['Element'] = ui['new_button'](C['Config']['Panel'], C['Config']['Side'], 'Dump Rank + Wins', function(e) return end),
+			['Element'] = C['Button'](C['Config']['Panel'], C['Config']['Side'], 'Dump Rank + Wins', function(e) return end),
 			['Callback'] = function(e)
 				local players = 0
 				local col = C['Colours']
 				local funcs = C['Funcs']
 				local hasValue = funcs['table.HasValue']
-				local tab = ui['get'](C['UI']['MM']['Notification Type']['Element'])
-				local targetTeam = ui['get'](C['UI']['MM']['Target Team']['Element'])
-				local myTeam = funcs['GetTeam'](entity['get_local_player']())
+				local tab = C['Get'](C['UI']['MM']['Notification Type']['Element'])
+				local targetTeam = C['Get'](C['UI']['MM']['Target Team']['Element'])
+				local myTeam = funcs['GetTeam'](C['Me']())
 
 				for i = 1, globals['maxplayers']() do
 					local team = funcs['GetTeam'](i)
@@ -1729,7 +1740,7 @@ C['UI'] = {
 					if (funcs['IsConnected'](i)) then
 						if ((team == 2 or team == 3) and funcs['IsHuman'](i)) then
 							if (targetTeam == 'Enemy' and team ~= myTeam) or (targetTeam == 'Team' and team == myTeam) or (targetTeam == 'All') then
-								local nick = entity['get_player_name'](i)
+								local nick = C['GetName'](i)
 								local wins = funcs['GetCompWins'](i)
 								local rank = funcs['GetCompRank'](i)
 
@@ -1737,8 +1748,8 @@ C['UI'] = {
 								local msgChat = C['Format']('%s%s%s has %s%s wins (%s%s%s)', col['Gold'], nick, col['White'], col['Purple'], wins, col['White'], col['Red'], rank, col['White'])
 
 								if (hasValue(tab,'Chat Msg')) then
-									client['delay_call'](funcs['GetChatDelay'](players), function()
-										client['exec'](funcs['GetChatMode'](), msg)
+									C['Delay'](funcs['GetChatDelay'](players), function()
+										C['Exec'](funcs['GetChatMode'](), msg)
 									end)
 								end
 
@@ -1761,59 +1772,59 @@ C['UI'] = {
 	},
 	['Other'] = {
 		['Translator'] = {
-			['Element'] = ui['new_checkbox'](C['Config']['Panel'], C['Config']['Side'], 'Translator'),
+			['Element'] = C['Checkbox'](C['Config']['Panel'], C['Config']['Side'], 'Translator'),
 			['Hidden'] = {
 				['Incoming'] = {
-					['Element'] = ui['new_checkbox'](C['Config']['Panel'], C['Config']['Side'], 'Translate Incoming Messages', false),
+					['Element'] = C['Checkbox'](C['Config']['Panel'], C['Config']['Side'], 'Translate Incoming Messages', false),
 					['Callback'] = function(e)
-						C['Notifications']['Send']('Translate Incoming Messages', ui['get'](e))
+						C['Notifications']['Send']('Translate Incoming Messages', C['Get'](e))
 					end
 				},
 				['Outgoing'] = {
-					['Element'] = ui['new_checkbox'](C['Config']['Panel'], C['Config']['Side'], 'Translate Outgoing Messages', false),
+					['Element'] = C['Checkbox'](C['Config']['Panel'], C['Config']['Side'], 'Translate Outgoing Messages', false),
 					['Callback'] = function(e)
-						C['Notifications']['Send']('Translate Outgoing Messages', ui['get'](e))
+						C['Notifications']['Send']('Translate Outgoing Messages', C['Get'](e))
 					end
 				},
 				['ShowOGMsg'] = {
-					['Element'] = ui['new_checkbox'](C['Config']['Panel'], C['Config']['Side'], 'Display OG messages [sent by you]', false),
+					['Element'] = C['Checkbox'](C['Config']['Panel'], C['Config']['Side'], 'Display OG messages [sent by you]', false),
 					['Callback'] = function(e)
-						C['Notifications']['Send']('Display OG Messages', ui['get'](e))
+						C['Notifications']['Send']('Display OG Messages', C['Get'](e))
 					end
 				},
-				['lblLocal'] = ui['new_label'](C['Config']['Panel'], C['Config']['Side'], 'Local Language [yours]'),
-				['Local'] = ui['new_textbox'](C['Config']['Panel'], C['Config']['Side'], 'en'),
-				['lblSource'] = ui['new_label'](C['Config']['Panel'], C['Config']['Side'], 'From Language'),
-				['Source'] = ui['new_textbox'](C['Config']['Panel'], C['Config']['Side'], 'en'),
-				['lblTo'] = ui['new_label'](C['Config']['Panel'], C['Config']['Side'], 'To Language'),
-				['To'] = ui['new_textbox'](C['Config']['Panel'], C['Config']['Side'], 'ru')
+				['lblLocal'] = C['Label'](C['Config']['Panel'], C['Config']['Side'], 'Local Language [yours]'),
+				['Local'] = C['Textbox'](C['Config']['Panel'], C['Config']['Side'], 'en'),
+				['lblSource'] = C['Label'](C['Config']['Panel'], C['Config']['Side'], 'From Language'),
+				['Source'] = C['Textbox'](C['Config']['Panel'], C['Config']['Side'], 'en'),
+				['lblTo'] = C['Label'](C['Config']['Panel'], C['Config']['Side'], 'To Language'),
+				['To'] = C['Textbox'](C['Config']['Panel'], C['Config']['Side'], 'ru')
 			},
 			['Callback'] = function(e)
 				local base = C['UI']['Other']['Translator']['Hidden']
-				local get = ui['get']
+				local get = C['Get']
 				local bool = get(e)
 
 				if (get(base['Local']) == '') then
-					ui['set'](base['Local'], 'en')
+					C['Set'](base['Local'], 'en')
 				end
 
 				if (get(base['Source']) == '') then
-					ui['set'](base['Source'], 'auto')
+					C['Set'](base['Source'], 'auto')
 				end
 
 				if (get(base['To']) == '') then
-					ui['set'](base['To'], 'ru')
+					C['Set'](base['To'], 'ru')
 				end
 
 				for _, v in pairs(base) do
 					if (type(v) ~= 'table') then
-						ui['set_visible'](v, bool)
+						C['SetVisible'](v, bool)
 					end
 				end
 
-				ui['set_visible'](base['Incoming']['Element'], bool)
-				ui['set_visible'](base['Outgoing']['Element'], bool)
-				ui['set_visible'](base['ShowOGMsg']['Element'], bool)
+				C['SetVisible'](base['Incoming']['Element'], bool)
+				C['SetVisible'](base['Outgoing']['Element'], bool)
+				C['SetVisible'](base['ShowOGMsg']['Element'], bool)
 
 				C['Notifications']['Send']('Translator', bool)
 			end
@@ -1825,32 +1836,32 @@ C['Events'] = {
 	['run_command'] = {
 		['Func'] = function(e)
 			if (C['Chat']['Spam']['Types']['Chat'] ~= 'Off') then
-				if (globals['tickcount']() >= (C['Chat']['Spam']['LastChatMessage'] + ui['get'](C['UI']['Spam']['Type']['Hidden']['Speed']))) then
+				if (globals['tickcount']() >= (C['Chat']['Spam']['LastChatMessage'] + C['Get'](C['UI']['Spam']['Type']['Hidden']['Speed']))) then
 					local spamType = C['Chat']['Spam']['Types']['Chat']
 					local funcs = C['Funcs']
 					local msg = funcs['GetShitPost'](spamType)
 
-					if (ui['get'](C['UI']['Other']['Translator']['Hidden']['Outgoing']['Element']) and not C['Vars']['Translator']['OnCD']) then
+					if (C['Get'](C['UI']['Other']['Translator']['Hidden']['Outgoing']['Element']) and not C['Vars']['Translator']['OnCD']) then
 						base['DoChatTranslation'](msg, false, true)
 					else
-						client['exec'](funcs['GetChatMode'](), msg)
+						C['Exec'](funcs['GetChatMode'](), msg)
 					end
 
 					C['Chat']['Spam']['LastChatMessage'] = globals['tickcount']()
 				end
 			end
 
-			if (ui['get'](C['UI']['Utilities']['Radio Spam']['Element'])) then
-				if (globals['tickcount']() >= (C['Chat']['Spam']['LastRadioMessage'] + ui['get'](C['UI']['Utilities']['Radio Spam']['Hidden']['Speed']))) then
-					client['exec'](C['Chat']['Spam']['RadioMessage'])
+			if (C['Get'](C['UI']['Utilities']['Radio Spam']['Element'])) then
+				if (globals['tickcount']() >= (C['Chat']['Spam']['LastRadioMessage'] + C['Get'](C['UI']['Utilities']['Radio Spam']['Hidden']['Speed']))) then
+					C['Exec'](C['Chat']['Spam']['RadioMessage'])
 
 					C['Chat']['Spam']['LastRadioMessage'] = globals['tickcount']()
 				end
 			end
 
-			if (ui['get'](C['UI']['Utilities']['Vote Revealer']['Element'])) then
+			if (C['Get'](C['UI']['Utilities']['Vote Revealer']['Element'])) then
 				for team, vote in pairs(C['Votes']['OnGoingVotes']) do
-					if (entity['get_prop'](vote['controller'], 'm_iActiveIssueIndex') ~= vote['IssueIndex']) then
+					if (C['GetProp'](vote['controller'], 'm_iActiveIssueIndex') ~= vote['IssueIndex']) then
 						C['Votes']['OnGoingVotes'][team] = nil
 					end
 				end
@@ -1859,11 +1870,11 @@ C['Events'] = {
 	},
 	['setup_command'] = {
 		['Func'] = function(cmd)
-			if (ui['get'](C['UI']['Utilities']['Use Spam']['Element'])) then
+			if (C['Get'](C['UI']['Utilities']['Use Spam']['Element'])) then
 				local base = C['Vars']['UseSpam']
 
-				if (ui['get'](C['UI']['Utilities']['Use Spam']['Hidden']['Key'])) then
-					if (globals['tickcount']() >= (base['LastSwap'] + ui['get'](C['UI']['Utilities']['Use Spam']['Hidden']['Speed']))) then
+				if (C['Get'](C['UI']['Utilities']['Use Spam']['Hidden']['Key'])) then
+					if (globals['tickcount']() >= (base['LastSwap'] + C['Get'](C['UI']['Utilities']['Use Spam']['Hidden']['Speed']))) then
 						base['LastSwap'] = globals['tickcount']()
 						cmd.in_use = base['Swap']
 						base['Swap'] = not base['Swap']
@@ -1875,45 +1886,45 @@ C['Events'] = {
 	['player_death'] = {
 		['Func'] = function(e)
 			if (e['userid'] and e['attacker']) then
-				local attacker = client['userid_to_entindex'](e['attacker'])
-				local victim = client['userid_to_entindex'](e['userid'])
+				local attacker = C['UIDToEntIndex'](e['attacker'])
+				local victim = C['UIDToEntIndex'](e['userid'])
 				local base = C['UI']
-				local me = entity['get_local_player']()
+				local me = C['Me']()
 
 				if (C['Chat']['Spam']['Types']['Kill'] ~= 'Off' or C['Chat']['Spam']['Types']['Death'] ~= 'Off') then
 					local funcs = C['Funcs']
 					local chatMode = funcs['GetChatMode']()
 
-					if (C['Chat']['Spam']['Types']['Kill'] ~= 'Off' and attacker == me and entity['is_enemy'](victim)) then
+					if (C['Chat']['Spam']['Types']['Kill'] ~= 'Off' and attacker == me and C['IsEnemy'](victim)) then
 						local spamType = C['Chat']['Spam']['Types']['Kill']
 						local msg = funcs['GetShitPost'](spamType)
 
-						if (ui['get'](C['UI']['Other']['Translator']['Hidden']['Outgoing']['Element']) and not C['Vars']['Translator']['OnCD']) then
+						if (C['Get'](C['UI']['Other']['Translator']['Hidden']['Outgoing']['Element']) and not C['Vars']['Translator']['OnCD']) then
 							funcs['DoChatTranslation'](msg, false, true)
 						else
-							client['exec'](chatMode, msg)
+							C['Exec'](chatMode, msg)
 						end
 					end
 
-					if (C['Chat']['Spam']['Types']['Death'] ~= 'Off' and entity['is_enemy'](attacker) and victim == me) then
+					if (C['Chat']['Spam']['Types']['Death'] ~= 'Off' and C['IsEnemy'](attacker) and victim == me) then
 						local spamType = C['Chat']['Spam']['Types']['Death']
 						local msg = funcs['GetShitPost'](spamType)
 
-						if (ui['get'](C['UI']['Other']['Translator']['Hidden']['Outgoing']['Element']) and not C['Vars']['Translator']['OnCD']) then
+						if (C['Get'](C['UI']['Other']['Translator']['Hidden']['Outgoing']['Element']) and not C['Vars']['Translator']['OnCD']) then
 							funcs['DoChatTranslation'](msg, false, true)
 						else
-							client['exec'](chatMode, msg)
+							C['Exec'](chatMode, msg)
 						end
 					end
 				end
 
-				if (ui['get'](base['MM']['TD Notifier']['Element'])) then
+				if (C['Get'](base['MM']['TD Notifier']['Element'])) then
 					local getTeam = C['Funcs']['GetTeam']
 
 					if (getTeam(attacker) == getTeam(me) and getTeam(victim) == getTeam(me) and attacker ~= victim) then
 						local col = C['Colours']
-						local victimNick = C['Format']('%s%s%s', col['Purple'], entity['get_player_name'](victim), col['White'])
-						local attackerNick = C['Format']('%s%s%s', col['LightGreen'], entity['get_player_name'](attacker), col['White'])
+						local victimNick = C['Format']('%s%s%s', col['Purple'], C['GetName'](victim), col['White'])
+						local attackerNick = C['Format']('%s%s%s', col['LightGreen'], C['GetName'](attacker), col['White'])
 
 						local id = e['attacker']
 
@@ -1932,18 +1943,18 @@ C['Events'] = {
 	['player_hurt'] = {
 		['Func'] = function(e)
 			if (e['userid'] and e['attacker']) then
-				local attacker = client['userid_to_entindex'](e['attacker'])
-				local victim = client['userid_to_entindex'](e['userid'])
+				local attacker = C['UIDToEntIndex'](e['attacker'])
+				local victim = C['UIDToEntIndex'](e['userid'])
 				local col = C['Colours']
-				local me = entity['get_local_player']()
+				local me = C['Me']()
 				local getTeam = C['Funcs']['GetTeam']
 				local white = col['White']
 
-				if (ui['get'](C['UI']['MM']['TD Notifier']['Element'])) then
+				if (C['Get'](C['UI']['MM']['TD Notifier']['Element'])) then
 					if (getTeam(attacker) == getTeam(me) and getTeam(victim) == getTeam(me) and attacker ~= victim) then
 						local dmgDealt = C['Format']('%s%s%s', col['Red'], e['dmg_health'], white)
-						local victimNick = C['Format']('%s%s%s', col['Purple'], entity['get_player_name'](victim), white)
-						local attackerNick = C['Format']('%s%s%s', col['LightGreen'], entity['get_player_name'](attacker), white)
+						local victimNick = C['Format']('%s%s%s', col['Purple'], C['GetName'](victim), white)
+						local attackerNick = C['Format']('%s%s%s', col['LightGreen'], C['GetName'](attacker), white)
 						local id = e['attacker']
 
 						if (C['Vars']['TeamKillData'][id] == nil) then
@@ -1956,8 +1967,8 @@ C['Events'] = {
 					end
 				end
 
-				if (ui['get'](C['UI']['MM']['Damage Logs']['Element']) and attacker == me and getTeam(me) ~= getTeam(victim)) then
-					local victimNick = entity['get_player_name'](victim)
+				if (C['Get'](C['UI']['MM']['Damage Logs']['Element']) and attacker == me and getTeam(me) ~= getTeam(victim)) then
+					local victimNick = C['GetName'](victim)
 					local shot = C['Vars']['HitLog']['ShotInfo'][e['id']]
 					
 					local msg = C['Format']('%s%s%s in: %s%s', col['Gold'], victimNick, white, col['Purple'], C['Vars']['HitLog']['Hit Groups'][e['hitgroup']])
@@ -1972,7 +1983,7 @@ C['Events'] = {
 		['Func'] = function(e)
 			C['Vars']['TeamKillData'] = {}
 
-			if (ui['get'](C['UI']['Utilities']['Start Ping']['Element'])) then
+			if (C['Get'](C['UI']['Utilities']['Start Ping']['Element'])) then
 				local map = globals['mapname']()
 				local base = C['DB']['Ping']
 				local teamInitials = C['Funcs']['GetTeamInitials']
@@ -1999,8 +2010,8 @@ C['Events'] = {
 		['Func'] = function(e)
 			C['Vars']['TeamKillData'] = {}
 
-			client.delay_call(1, function()
-				if (ui['get'](C['UI']['Utilities']['End Ping']['Element'])) then
+			C['Delay'](1, function()
+				if (C['Get'](C['UI']['Utilities']['End Ping']['Element'])) then
 					local map = globals['mapname']()
 					local base = C['DB']['Ping']
 					local teamInitials = C['Funcs']['GetTeamInitials']
@@ -2023,8 +2034,8 @@ C['Events'] = {
 					]], database['read'](base['WebhookEnd']), content))()
 				end
 
-				if (ui['get'](C['UI']['Utilities']['Auto Leave']['Element'])) then
-					client['exec']('disconnect')
+				if (C['Get'](C['UI']['Utilities']['Auto Leave']['Element'])) then
+					C['Exec']('disconnect')
 				end
 			end)
 		end
@@ -2046,17 +2057,17 @@ C['Events'] = {
 	},
 	['vote_cast'] = {
 		['Func'] = function(e)
-			client['delay_call'](0.3, function()
-				if (ui['get'](C['UI']['Utilities']['Vote Revealer']['Element'])) then
+			C['Delay'](0.3, function()
+				if (C['Get'](C['UI']['Utilities']['Vote Revealer']['Element'])) then
 					local team = e['team']
 					local base = C['Votes']
 
 					if (C['Votes']['VoteOptions']) then
 						local controller
-						local voteControllers = entity['get_all']('CVoteController')
+						local voteControllers = C['GetAllEnts']('CVoteController')
 
 						for i = 1, #voteControllers do
-							if entity['get_prop'](voteControllers[i], 'm_iOnlyTeamToVote') == team then
+							if C['GetProp'](voteControllers[i], 'm_iOnlyTeamToVote') == team then
 								controller = voteControllers[i]
 								break
 							end
@@ -2067,7 +2078,7 @@ C['Events'] = {
 								['team'] = team,
 								['options'] = C['Votes']['VoteOptions'],
 								['controller'] = controller,
-								['IssueIndex'] = entity['get_prop'](controller, 'm_iActiveIssueIndex'),
+								['IssueIndex'] = C['GetProp'](controller, 'm_iActiveIssueIndex'),
 								['votes'] = {}
 							}
 
@@ -2104,7 +2115,7 @@ C['Events'] = {
 							ongoingVote['caller'] = player
 
 							if (ongoingVote['type'] ~= 'kick') then
-								local msg = C['Format']('%s - %s%s%s called a vote to %s%s%s', white, colToUse, entity['get_player_name'](player), white, col['Purple'], C['Votes']['Descriptions'][ongoingVote['type']], white)
+								local msg = C['Format']('%s - %s%s%s called a vote to %s%s%s', white, colToUse, C['GetName'](player), white, col['Purple'], C['Votes']['Descriptions'][ongoingVote['type']], white)
 
 								C['Notifications']['Send']('Vote', false, msg, 'vote')
 							end
@@ -2116,14 +2127,14 @@ C['Events'] = {
 									ongoingVote['target'] = player
 
 									local teamName = C['Format']('The %s%s', (team == 3 and 'CT\'s' or 'T\'s'), white)
-									local msg = C['Format']('%s - %s%s%s called a vote to %s%s %s%s %s', white, white, colToUse, teamName, col['Purple'], C['Votes']['Descriptions'][ongoingVote['type']], colToUse, entity['get_player_name'](ongoingVote['target']), white)
+									local msg = C['Format']('%s - %s%s%s called a vote to %s%s %s%s %s', white, white, colToUse, teamName, col['Purple'], C['Votes']['Descriptions'][ongoingVote['type']], colToUse, C['GetName'](ongoingVote['target']), white)
 
 									C['Notifications']['Send']('Vote', false, msg, 'vote')
 								end
 							end
 						end
 
-						local msg = C['Format']('%s - %s%s%s voted %s', white, colToUse, entity['get_player_name'](player), white, voteTextCol)
+						local msg = C['Format']('%s - %s%s%s voted %s', white, colToUse, C['GetName'](player), white, voteTextCol)
 						C['Notifications']['Send']('Vote', false, msg, 'vote')
 					end
 				end
@@ -2142,9 +2153,9 @@ C['Events'] = {
 	},
 	['aim_miss'] = {
 		['Func'] = function(e)
-			if (ui['get'](C['UI']['MM']['Damage Logs']['Element'])) then
+			if (C['Get'](C['UI']['MM']['Damage Logs']['Element'])) then
 				local target = e['target']
-				local nick = entity['get_player_name'](target)
+				local nick = C['GetName'](target)
 				local shot = C['Vars']['HitLog']['ShotInfo'][e['id']]
 				local col = C['Colours']
 				local white = col['White']
@@ -2161,11 +2172,11 @@ C['Events'] = {
 		['Func'] = function(e)
 			local speaker = e['entity']
 			local speakerTeam =  C['Funcs']['GetTeam'](speaker)
-			local me = entity['get_local_player']()
+			local me = C['Me']()
 			local myTeam =  C['Funcs']['GetTeam'](me)
 			local text = e['text']
 
-			if (ui['get'](C['UI']['MM']['AFK Buy-Drop']['Element'])) then
+			if (C['Get'](C['UI']['MM']['AFK Buy-Drop']['Element'])) then
 				local prefix = C['Chat']['CmdPrefix']
 
 				if (text:sub(1,#prefix) == prefix) then
@@ -2179,24 +2190,24 @@ C['Events'] = {
 				end
 			end
 
-			if (ui['get'](C['UI']['Other']['Translator']['Element']) and not C['Vars']['Translator']['OnCD'] and speaker ~= me) then
+			if (C['Get'](C['UI']['Other']['Translator']['Element']) and not C['Vars']['Translator']['OnCD'] and speaker ~= me) then
 				C['Funcs']['DoChatTranslation'](text, true, speaker == me)
 			end
 		end
 	},
 	['weapon_fire'] = {
 		['Func'] = function(e)
-			if (ui['get'](C['UI']['Utilities']['Plasma Shot']['Element'])) then
-				local me = entity['get_local_player']()
-				local shooter = client['userid_to_entindex'](e['userid'])
+			if (C['Get'](C['UI']['Utilities']['Plasma Shot']['Element'])) then
+				local me = C['Me']()
+				local shooter = C['UIDToEntIndex'](e['userid'])
 
-				if (C['Funcs']['HasTaser'](me) and ui['get'](C['UI']['Utilities']['Plasma Shot']['Hidden']['Key'])) then
+				if (C['Funcs']['HasTaser'](me) and C['Get'](C['UI']['Utilities']['Plasma Shot']['Hidden']['Key'])) then
 					if (shooter == me) then
-						local cmd = client['exec']
+						local cmd = C['Exec']
 
 						cmd('use weapon_taser')
 
-						client['delay_call'](C['Funcs']['GetChatDelay'](0.001), function()
+						C['Delay'](C['Funcs']['GetChatDelay'](0.001), function()
 							cmd('lastinv')
 						end)
 
@@ -2231,7 +2242,7 @@ C['Events'] = {
 				message = text:sub(#'say_team "' + 1, #text - 1)
 			end
 
-			if (ui['get'](C['UI']['Other']['Translator']['Element'])) then
+			if (C['Get'](C['UI']['Other']['Translator']['Element'])) then
 				if (message:sub(1, #'.tsay ') == '.tsay ') then
 					local language = message:sub(#'.tsay ' + 1, string.find(message, ' ', #'.tsay ' + 1) - 1)
 					local translateMsg = message:sub(#('.tsay ' .. language) + 2, #message)
@@ -2240,7 +2251,7 @@ C['Events'] = {
 					return true
 				end
 
-				if (ui['get'](C['UI']['Other']['Translator']['Hidden']['Outgoing']['Element']) and not C['Vars']['Translator']['OnCD']) then
+				if (C['Get'](C['UI']['Other']['Translator']['Hidden']['Outgoing']['Element']) and not C['Vars']['Translator']['OnCD']) then
 					if (teamChat and text:sub(1, #'say_team "') == 'say_team "' and text ~= 'say_team ""' and text ~= 'say_team " "') or (not teamChat and text:sub(1, 5) == 'say "' and text ~= 'say ""' and text ~= 'say " "') then
 						C['Funcs']['DoChatTranslation'](message, false, true, nil, teamChat)
 						return true
@@ -2252,7 +2263,7 @@ C['Events'] = {
 }
 
 for event, entry in pairs(C['Events']) do
-	client['set_event_callback'](event, entry['Func'])
+	C['RegisterEvent'](event, entry['Func'])
 end
 
 for cat, entry in pairs(C['UI']) do
@@ -2260,15 +2271,15 @@ for cat, entry in pairs(C['UI']) do
 		if (table['Hidden']) then
 			for _, hidden in pairs(table['Hidden']) do
 				if (type(hidden) == 'table') then
-					ui['set_callback'](hidden['Element'], hidden['Callback'])
-					ui['set_visible'](hidden['Element'], false)
+					C['SetCallback'](hidden['Element'], hidden['Callback'])
+					C['SetVisible'](hidden['Element'], false)
 				else
-					ui['set_visible'](hidden, false)
+					C['SetVisible'](hidden, false)
 				end
 			end
 		end
 
-		ui['set_callback'](table['Element'], table['Callback'])
+		C['SetCallback'](table['Element'], table['Callback'])
 	end
 end
 
