@@ -83,7 +83,7 @@ end
 C['ChangeLogs'] = {
 	'',
 	'===== 1.14 (Apr 29 2020) =====',
-	'Changed how !buy command works, now takes a colour so multiple people can use it at once [eg !buy g ak or !buy green ak]',
+	'Changed how !buy command works [now takes a colour so multiple people can use it at once [eg !buy g ak or !buy green ak]',
 	'Changed contatenation to string.format so its easier to manage strings',
 	'Changed how .tsay & \'Outgoing Messages\' works [messages go to team chat if sent in team chat otherwise they go to all chat]',
 	'Changed country codes from long string into array'
