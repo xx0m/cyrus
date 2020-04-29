@@ -2097,13 +2097,12 @@ C['Events'] = {
 
 						C['Votes']['VoteOptions'] = nil
 					end
-					
-					local white = col['White']
 
 					local ongoingVote = C['Votes']['OnGoingVotes']['team']
 					if (ongoingVote) then
 						local player = e['entityid']
 						local col = C['Colours']
+						local white = col['White']
 						local voteText = ongoingVote['options'][e['vote_option'] + 1]
 						local voteTextCol = (voteText == 'Yes' and col['Green'] .. 'Yes' .. white or col['Red'] .. 'No' .. white)
 
