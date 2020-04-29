@@ -98,7 +98,8 @@ C['ChangeLogs'] = {
 	'Changed how .tsay & \'Outgoing Messages\' works [messages go to team chat if sent in team chat otherwise they go to all chat]',
 	'Changed country codes from long string into array',
 	'Cached API functions & removed a bunch of white space',
-	'Removed useless js encoder [thanks to NmChris]'
+	'Removed useless js encoder [thanks to NmChris]',
+	'Added start & end labels to reduce confusion with other scripts'
 }
 
 C['CountryCodes'] = {
