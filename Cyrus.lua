@@ -97,7 +97,7 @@ C['ChangeLogs'] = {
 	'===== 1.16 (May 1 2020) =====',
 	'Rewrote how teams, team initials & game score were fetched for discord ping',
 	'Added proper map names for discord ping [eg de_dust2 is now Dust II] [thanks to HridayHS, was too lazy to do it myself]',
-	'Added valve dedicated server check for discord ping on match start to reduce spam [didnt change on match end incase people use for like hvh or w/e]'
+	'Added valve dedicated server check for discord ping on match start to reduce spam [didn\'t change on match end in case people use for like hvh or w/e]'
 }
 
 C['MapList'] = {
