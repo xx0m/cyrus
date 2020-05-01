@@ -32,6 +32,7 @@ C['GetClassName'] = entity['get_classname']
 C['SID64'] = entity['get_steam64']
 C['IsEnemy'] = entity['is_enemy']
 C['GetAllEnts'] = entity['get_all']
+C['GameRules'] = entity['get_game_rules']
 
 C['Config'] = {
 	['Panel'] = 'LUA',
@@ -95,7 +96,8 @@ C['ChangeLogs'] = {
 	'',
 	'===== 1.16 (May 1 2020) =====',
 	'Rewrote how teams, team initials & game score were fetched for discord ping',
-	'Added proper map names for discord ping [eg de_dust2 is now Dust II] [thanks to HridayHS, was too lazy to do it myself]'
+	'Added proper map names for discord ping [eg de_dust2 is now Dust II] [thanks to HridayHS, was too lazy to do it myself]',
+	'Added valve dedicated server check for discord ping on match start to reduce spam [didnt change on match end incase people use for like hvh or w/e]'
 }
 
 C['MapList'] = {
@@ -1340,7 +1342,7 @@ C['Funcs'] = {
 	['GetTeamInitials'] = function()
 		local myTeam = C['Funcs']['GetTeam'](C['Me']())
 		local enemyTeam = (myTeam == 3) and 2 or 3
-	
+
 		return (myTeam == 3) and 'CT' or 'T', (myTeam == 3) and 'T' or 'CT'
 	end,
 	['GetTeamRounds'] = function()
@@ -1349,7 +1351,7 @@ C['Funcs'] = {
 
 		if (myTeam == 'T') then myTeam = 'TERRORIST' end
 		if (enemyTeam == 'T') then enemyTeam = 'TERRORIST' end
-	
+
 		return gameData[myTeam]['score'], gameData[enemyTeam]['score']
 	end,
 	['GetTeams'] = function()
@@ -1357,7 +1359,7 @@ C['Funcs'] = {
 
 		for i = 1, C['MaxPlayers']() do
 			local team = C['Funcs']['GetTeam'](i)
-	
+
 			if (team ~= nil and (team == 2 or team == 3) and C['Funcs']['IsConnected'](i)) then
 				if (team == 2) then
 					T[#T + 1] = i
@@ -1366,16 +1368,14 @@ C['Funcs'] = {
 				end
 			end
 		end
-	
+
 		return { t = T, ct = CT }
 	end,
 	['StartPingMessage'] = function()
 		local str = ''
 		local base = C['Funcs']
 		local teamInitials, enemyInitials = C['Funcs']['GetTeamInitials']()
-		teamInitials = teamInitials:lower()
-		enemyInitials = enemyInitials:lower()
-	
+
 		local data = {
 			[teamInitials] = {
 				['msg'] = '',
@@ -1386,30 +1386,30 @@ C['Funcs'] = {
 				['players'] = 0
 			}
 		}
-	
+
 		for _, v in pairs(C['Funcs']['GetTeams']()) do
 			for i = 1, #v do
 				local playerTeam = base['GetTeam'](v[i])
 				local nick = C['GetName'](v[i])
 				local sid64 = base['SteamID3To64'](C['SID64'](v[i]))
 				local dataRef = data[(playerTeam == base['GetTeam'](C['Me']()) and teamInitials or enemyInitials)]
-	
+
 				if (base['IsBot'](v[i])) then
 					dataRef['msg'] = C['Format']([[%s\n\t● %s (BOT)]], dataRef['msg'], nick)
 				else
 					dataRef['msg'] = C['Format']([[%s\n\t● %s ([%s](<%s/>)) (%s)]], dataRef['msg'], nick, sid64, C['Format']('https://steamcommunity.com/profiles/%s', sid64), base['GetCompRank'](v[i]))
 				end
-	
+
 				dataRef['players'] = dataRef['players'] + 1
 			end
 		end
-	
+
 		for _, v in pairs(data) do
 			if (v['players'] < 1) then
 				v['msg'] = C['Format']([[%s\n\tn/a]], v['msg'])
 			end
 		end
-	
+
 		return C['Format']([[%s\n\n]], data[teamInitials]['msg']), C['Format']([[%s\n\n]], data[enemyInitials]['msg'])
 	end,
 	['EndPingMessage'] = function()
@@ -1531,6 +1531,9 @@ C['Funcs'] = {
 	end,
 	['GetPlayerCol'] = function()
 		return C['P']['GameStateAPI']['GetPlayerColor']( C['P']['MyPersonaAPI']['GetXuid']())
+	end,
+	['IsOnDedicatedServer'] = function()
+		return C['Funcs']['GetProperty']('m_bIsValveDS', C['GameRules']()) == 1
 	end
 }
 
@@ -2050,7 +2053,7 @@ C['Events'] = {
 		['Func'] = function(e)
 			C['Vars']['TeamKillData'] = {}
 
-			if (C['Get'](C['UI']['Utilities']['Start Ping']['Element'])) then
+			if (C['Funcs']['IsOnDedicatedServer']() and C['Get'](C['UI']['Utilities']['Start Ping']['Element'])) then
 				local map = C['Funcs']['GetMap']()
 				local base = C['DB']['Ping']
 				local myTeam, enemyTeam = C['Funcs']['StartPingMessage']()
