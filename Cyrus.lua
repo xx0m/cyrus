@@ -1,5 +1,8 @@
 local C = {}
 
+C['MaxPlayers'] = globals['maxplayers']
+C['Map'] = globals['mapname']
+
 C['Get'] = ui['get']
 C['Set'] = ui['set']
 C['SetVisible'] = ui['set_visible']
@@ -30,8 +33,6 @@ C['SID64'] = entity['get_steam64']
 C['IsEnemy'] = entity['is_enemy']
 C['GetAllEnts'] = entity['get_all']
 
---C['Exec']('clear')
-
 C['Config'] = {
 	['Panel'] = 'LUA',
 	['Side'] = 'A'
@@ -39,7 +40,7 @@ C['Config'] = {
 
 C['JS'] = {}
 C['JS']['Open'] = panorama['open']()
-panorama['loadstring']('var cyrus_last_translation = \'\';')() -- essential otherwise trash error
+panorama['loadstring']('var cyrus_last_translation = "";')() -- essential otherwise trash error
 C['JS']['Funcs'] = panorama['loadstring']([[
 	return {
 		GetLastTranslation: function() {
@@ -51,7 +52,7 @@ C['JS']['Funcs'] = panorama['loadstring']([[
 	}
 ]])()
 
-C['Format'] = string['format']  
+C['Format'] = string['format']
 
 C['Libs'] = {
 	['ChatPrint'] = {
@@ -92,14 +93,45 @@ end
 
 C['ChangeLogs'] = {
 	'',
-	'===== 1.15 (Apr 29 2020) =====',
-	'Changed how !buy command works [now takes a colour so multiple people can use it at once [eg !buy g ak or !buy green ak]',
-	'Changed contatenation to string.format so its easier to manage strings',
-	'Changed how .tsay & \'Outgoing Messages\' works [messages go to team chat if sent in team chat otherwise they go to all chat]',
-	'Changed country codes from long string into array',
-	'Cached API functions & removed a bunch of white space',
-	'Removed useless js encoder [thanks to NmChris]',
-	'Added start & end labels to reduce confusion with other scripts'
+	'===== 1.16 (May 1 2020) =====',
+	'Rewrote how teams, team initials & game score were fetched for discord ping',
+	'Added proper map names for discord ping [eg de_dust2 is now Dust II] [thanks to HridayHS, was too lazy to do it myself]'
+}
+
+C['MapList'] = {
+	['ar_baggage'] = 'Baggage',
+	['ar_dizzy'] = 'Dizzy',
+	['ar_lunacy'] = 'Lunacy',
+	['ar_monastery'] = 'Monastery',
+	['ar_shoots'] = 'Shoots',
+	['cs_agency'] = 'Agency',
+	['cs_assault'] = 'Assault',
+	['cs_italy'] = 'Italy',
+	['cs_militia'] = 'militia',
+	['cs_office'] = 'Office',
+	['de_anubis'] = 'Anubis',
+	['de_bank'] = 'Bank',
+	['de_cache'] = 'Cache',
+	['de_cbble'] = 'Cobblestone',
+	['de_chlorine'] = 'Chlorine',
+	['de_dust2'] = 'Dust II',
+	['de_inferno'] = 'Inferno',
+	['de_lake'] = 'Lake',
+	['de_mirage'] = 'Mirage',
+	['de_nuke'] = 'Nuke',
+	['de_overpass'] = 'Overpass',
+	['de_safehouse'] = 'Safehouse',
+	['de_shortdust'] = 'Shortdust',
+	['de_shortnuke'] = 'Shortnuke',
+	['de_stmarc'] = 'St. Marc',
+	['de_sugarcane'] = 'Sugarcane',
+	['de_train'] = 'Train',
+	['de_vertigo'] = 'Vertigo',
+	['dz_blacksite'] = 'Blacksite',
+	['dz_junglety'] = 'Junglety',
+	['dz_sirocco'] = 'Sirocco',
+	['gd_cbble'] = 'Cobblestone',
+	['gd_rialto'] = 'Rialto'
 }
 
 C['CountryCodes'] = {
@@ -503,9 +535,9 @@ C['Chat'] = {
 	['Commands'] = {
 		['buy'] = {
 			['Func'] = function(args, speaker)
-				local speakerTeam =  C['Funcs']['GetTeam'](speaker)
+				local speakerTeam = C['Funcs']['GetTeam'](speaker)
 				local me = C['Me']()
-				local myTeam =  C['Funcs']['GetTeam'](me)
+				local myTeam = C['Funcs']['GetTeam'](me)
 
 				if (speakerTeam == myTeam and speaker ~= me) then
 					if (C['Get'](C['UI']['MM']['AFK Buy-Drop']['Element'])) then
@@ -859,7 +891,7 @@ C['Chat'] = {
 			'welcome to the noob scoole bus first stop ur house <<PWND>>',
 			'>mfw i rek u',
 			'\'i got my ass kiked so hard im shittn out my mouf\' - u',
-			'<-(0.0)-<   dats u gettn ownd LOL',
+			'<-(0.0)-< dats u gettn ownd LOL',
 			'u just got ur ass ablitterated <<<RECKT>>>',
 			'c=3 (dats ur tiney dik rofl)',
 			'just leeve the game and let the real mans play',
@@ -1261,7 +1293,7 @@ C['Funcs'] = {
 	end,
 	['GetCompRank'] = function(index)
 		local rankID = C['Funcs']['GetPlayerProperty']('m_iCompetitiveRanking', index)
-		return (string['find'](globals['mapname'](), 'dz') and (C['Ranks']['DZ'][rankID] or 'unranked') or (C['Ranks']['MM'][rankID] or 'unranked'))
+		return (string['find'](C['Map'](), 'dz') and (C['Ranks']['DZ'][rankID] or 'unranked') or (C['Ranks']['MM'][rankID] or 'unranked'))
 	end,
 	['GetChatMode'] = function()
 		return (C['Get'](C['UI']['Utilities']['Team Only']['Element']) and 'say_team' or 'say') .. ' '
@@ -1301,111 +1333,137 @@ C['Funcs'] = {
 	['IsValidConsoleCmd'] = function(text)
 		return C['ConCmd']['Cmds'][text:lower()]
 	end,
-	['GetTeamInitials'] = function(bool)
-		local myTeam = C['Funcs']['GetTeam'](C['Me']())
-		local enemyTeam = (myTeam == 3) and 2 or 3
-
-		if (bool) then
-			return myTeam == 3 and 'CT' or 'T'
-		else
-			return enemyTeam == 3 and 'CT' or 'T'
-		end
+	['GetMap'] = function()
+		local map = C['Map']()
+		return (C['MapList'][map] or map)
 	end,
-	['GetTeamRounds'] = function(bool)
+	['GetTeamInitials'] = function()
 		local myTeam = C['Funcs']['GetTeam'](C['Me']())
 		local enemyTeam = (myTeam == 3) and 2 or 3
+	
+		return (myTeam == 3) and 'CT' or 'T', (myTeam == 3) and 'T' or 'CT'
+	end,
+	['GetTeamRounds'] = function()
+		local myTeam, enemyTeam = C['Funcs']['GetTeamInitials']()
 		local gameData = C['P']['GameStateAPI']['GetScoreDataJSO']()['teamdata']
-		local team = ''
 
-		if (bool) then
-			team = myTeam == 3 and 'CT' or 'TERRORIST'
-		else
-			team = enemyTeam == 3 and 'CT' or 'TERRORIST'
-		end
-
-		return gameData[team]['score']
+		if (myTeam == 'T') then myTeam = 'TERRORIST' end
+		if (enemyTeam == 'T') then enemyTeam = 'TERRORIST' end
+	
+		return gameData[myTeam]['score'], gameData[enemyTeam]['score']
 	end,
-	['StartPlayerTable'] = function(bool)
-		local base = C['Funcs']
-		local myTeam = base['GetTeam'](C['Me']())
-		local str = ''
-		local totalPlayers = 0
+	['GetTeams'] = function()
+		local T, CT = {}, {}
 
-		for i = 0, globals['maxplayers']() do
-			local playerTeam = base['GetTeam'](i)
-
-			if ((playerTeam == 2 or playerTeam == 3) and base['IsConnected'](i)) then
-				if (myTeam == playerTeam and bool) or (myTeam ~= playerTeam and not bool) then
-					local nick = C['GetName'](i)
-					local rank = base['GetCompRank'](i)
-					local sid64 = base['SteamID3To64'](C['SID64'](i))
-					local sid64Format = C['Format']('https://steamcommunity.com/profiles/%s', sid64)
-					local isBot = base['IsBot'](i)
-
-					if (isBot) then
-						str = C['Format']([[%s\n\t● %s (BOT)]], str, nick)
-					else
-						str = C['Format']([[%s\n\t● %s ([%s](<%s/>)) (%s)]], str, nick, sid64, sid64Format, rank)
-					end
-
-					totalPlayers = totalPlayers + 1
+		for i = 1, C['MaxPlayers']() do
+			local team = C['Funcs']['GetTeam'](i)
+	
+			if (team ~= nil and (team == 2 or team == 3) and C['Funcs']['IsConnected'](i)) then
+				if (team == 2) then
+					T[#T + 1] = i
+				elseif (team == 3) then
+					CT[#CT + 1] = i
 				end
 			end
 		end
-
-		if (totalPlayers == 0) then
-			str = C['Format']([[%s\n\tn/a]], str)
-		end
-
-		return C['Format']([[%s\n\n]], str)
+	
+		return { t = T, ct = CT }
 	end,
-	['EndPlayerTable'] = function(bool)
-		local base = C['Funcs']
+	['StartPingMessage'] = function()
 		local str = ''
-		local arr = {}
+		local base = C['Funcs']
+		local teamInitials, enemyInitials = C['Funcs']['GetTeamInitials']()
+		teamInitials = teamInitials:lower()
+		enemyInitials = enemyInitials:lower()
+	
+		local data = {
+			[teamInitials] = {
+				['msg'] = '',
+				['players'] = 0
+			},
+			[enemyInitials] = {
+				['msg'] = '',
+				['players'] = 0
+			}
+		}
+	
+		for _, v in pairs(C['Funcs']['GetTeams']()) do
+			for i = 1, #v do
+				local playerTeam = base['GetTeam'](v[i])
+				local nick = C['GetName'](v[i])
+				local sid64 = base['SteamID3To64'](C['SID64'](v[i]))
+				local dataRef = data[(playerTeam == base['GetTeam'](C['Me']()) and teamInitials or enemyInitials)]
+	
+				if (base['IsBot'](v[i])) then
+					dataRef['msg'] = C['Format']([[%s\n\t● %s (BOT)]], dataRef['msg'], nick)
+				else
+					dataRef['msg'] = C['Format']([[%s\n\t● %s ([%s](<%s/>)) (%s)]], dataRef['msg'], nick, sid64, C['Format']('https://steamcommunity.com/profiles/%s', sid64), base['GetCompRank'](v[i]))
+				end
+	
+				dataRef['players'] = dataRef['players'] + 1
+			end
+		end
+	
+		for _, v in pairs(data) do
+			if (v['players'] < 1) then
+				v['msg'] = C['Format']([[%s\n\tn/a]], v['msg'])
+			end
+		end
+	
+		return C['Format']([[%s\n\n]], data[teamInitials]['msg']), C['Format']([[%s\n\n]], data[enemyInitials]['msg'])
+	end,
+	['EndPingMessage'] = function()
+		local base = C['Funcs']
+		local teamInitials, enemyInitials = base['GetTeamInitials']()
+		local data = {
+			[teamInitials] = {
+				['players'] = {},
+				['msg'] = ''
+			},
+			[enemyInitials] = {
+				['players'] = {},
+				['msg'] = ''
+			}
+		}
 
-		for i = 0, globals['maxplayers']() do
+		for i = 1, C['MaxPlayers']() do
 			local playerTeam = base['GetTeam'](i)
-			local myTeam = base['GetTeam'](C['Me']())
-
+	
 			if ((playerTeam == 2 or playerTeam == 3) and base['IsConnected'](i)) then
+				local dataRef = data[(playerTeam == base['GetTeam'](C['Me']()) and teamInitials or enemyInitials)]
 				local score = base['GetPlayerProperty']('m_iScore', i)
+	
+				table.insert(dataRef['players'], {player = i, score = score})
+			end
+		end
 
-				if (myTeam == playerTeam and bool) or (myTeam ~= playerTeam and not bool) then
-					table.insert(arr, {player = i, score = score})
+		table.sort(data[teamInitials]['players'], function(a,b) return a.score > b.score end)
+		table.sort(data[enemyInitials]['players'], function(a,b) return a.score > b.score end)
+
+		for _, v in pairs(data) do
+			for i = 1, #v['players'] do
+				local player = v['players'][i]['player']
+				local nick = C['GetName'](player)
+				local sid64 = base['SteamID3To64'](C['SID64'](player))
+				local dataRef = data[(base['GetTeam'](player) == base['GetTeam'](C['Me']()) and teamInitials or enemyInitials)]
+	
+				if (base['IsBot'](player)) then
+					dataRef['msg'] = C['Format']([[%s\n\t● %s (BOT)]], dataRef['msg'], nick)
+				else
+					dataRef['msg'] = C['Format']([[%s\n\t● %s ([%s](<%s/>)) (%s)]], dataRef['msg'], nick, sid64, C['Format']('https://steamcommunity.com/profiles/%s', sid64), base['GetCompRank'](player))
 				end
+	
+				dataRef['msg'] = C['Format']([[%s (%s/%s/%s) (mvp: %s score: %s)]], dataRef['msg'], base['GetPlayerProperty']('m_iKills', player), base['GetPlayerProperty']('m_iAssists', player), base['GetPlayerProperty']('m_iDeaths', player), base['GetPlayerProperty']('m_iMVPs', player), v['players'][i]['score'])
 			end
 		end
 
-		table.sort(arr, function(a,b) return a.score > b.score end)
-
-		for _, v in pairs(arr) do
-			local i = v.player
-			local nick = C['GetName'](i)
-			local rank = base['GetCompRank'](i)
-			local sid64 = base['SteamID3To64'](C['SID64'](i))
-			local sid64Format = C['Format']('https://steamcommunity.com/profiles/%s', sid64)
-			local isBot = base['IsBot'](i)
-			local kills = base['GetPlayerProperty']('m_iKills', i)
-			local deaths = base['GetPlayerProperty']('m_iDeaths', i)
-			local assists = base['GetPlayerProperty']('m_iAssists', i)
-			local mvp = base['GetPlayerProperty']('m_iMVPs', i)
-			local score = v.score
-
-			if (isBot) then
-				str = C['Format']([[%s\n\t● %s (BOT)]], str, nick)
-			else
-				str = C['Format']([[%s\n\t● %s ([%s](<%s/>)) (%s)]], str, nick, sid64, sid64Format, rank)
+		for _, v in pairs(data) do
+			if (#v['players'] < 1) then
+				v['msg'] = C['Format']([[%s\n\tn/a]], v['msg'])
 			end
-
-			str = C['Format']([[%s (%s/%s/%s) (mvp: %s score: %s)]], str, kills, assists, deaths, mvp, score)
 		end
 
-		if (#arr == 0) then
-			str = C['Format']([[%s\n\tn/a]], str)
-		end
-
-	   return C['Format']([[%s\n\n]], str)
+		return C['Format']([[%s\n\n]], data[teamInitials]['msg']), C['Format']([[%s\n\n]], data[enemyInitials]['msg'])
 	end,
 	['PartyChatSay'] = function(text)
 		C['P']['PartyListAPI']['SessionCommand']('Game::Chat', C['Format']('run all xuid %s chat %s', C['P']['MyPersonaAPI']['GetXuid'](), text))
@@ -1677,7 +1735,7 @@ C['UI'] = {
 				local msg = base['GetShitPost'](spamType)
 
 				if (C['Get'](C['UI']['Other']['Translator']['Hidden']['Outgoing']['Element']) and not C['Vars']['Translator']['OnCD']) then
-				   base['DoChatTranslation'](msg, false, true)
+					base['DoChatTranslation'](msg, false, true)
 				else
 					local chatMode = base['GetChatMode']()
 					C['Exec'](chatMode, msg)
@@ -1739,7 +1797,7 @@ C['UI'] = {
 				local targetTeam = C['Get'](C['UI']['MM']['Target Team']['Element'])
 				local myTeam = funcs['GetTeam'](C['Me']())
 
-				for i = 1, globals['maxplayers']() do
+				for i = 1, C['MaxPlayers']() do
 					local team = funcs['GetTeam'](i)
 
 					if (funcs['IsConnected'](i)) then
@@ -1749,7 +1807,7 @@ C['UI'] = {
 								local wins = funcs['GetCompWins'](i)
 								local rank = funcs['GetCompRank'](i)
 
-								local msg =  C['Format']('%s has %s wins (%s)', nick, wins, rank)
+								local msg = C['Format']('%s has %s wins (%s)', nick, wins, rank)
 								local msgChat = C['Format']('%s%s%s has %s%s wins (%s%s%s)', col['Gold'], nick, col['White'], col['Purple'], wins, col['White'], col['Red'], rank, col['White'])
 
 								if (hasValue(tab,'Chat Msg')) then
@@ -1993,13 +2051,11 @@ C['Events'] = {
 			C['Vars']['TeamKillData'] = {}
 
 			if (C['Get'](C['UI']['Utilities']['Start Ping']['Element'])) then
-				local map = globals['mapname']()
+				local map = C['Funcs']['GetMap']()
 				local base = C['DB']['Ping']
-				local teamInitials = C['Funcs']['GetTeamInitials']
-				local pingPlyTbl = C['Funcs']['StartPlayerTable']
-
-				-- redo way that teams are retrieved to be less shit
-				local content = C['Format']([[<@%s> CS:GO Match Started\n\n**Map:** %s\n\n**Your Team (%s)**%s**Enemy Team (%s)**%s]], database['read'](base['ID']), map, teamInitials(true), pingPlyTbl(true), teamInitials(false), pingPlyTbl(false))
+				local myTeam, enemyTeam = C['Funcs']['StartPingMessage']()
+				local teamInitials, enemyInitials = C['Funcs']['GetTeamInitials']()
+				local content = C['Format']([[<@%s> CS:GO Match Started\n\n**Map:** %s\n\n**Your Team (%s)**%s**Enemy Team (%s)**%s]], database['read'](base['ID']), map, teamInitials, myTeam, enemyInitials, enemyTeam)
 
 				panorama['loadstring'](C['Format']([[
 					$.AsyncWebRequest('%s',
@@ -2021,14 +2077,12 @@ C['Events'] = {
 
 			C['Delay'](1, function()
 				if (C['Get'](C['UI']['Utilities']['End Ping']['Element'])) then
-					local map = globals['mapname']()
+					local map = C['Funcs']['GetMap']()
 					local base = C['DB']['Ping']
-					local teamInitials = C['Funcs']['GetTeamInitials']
-					local teamRounds = C['Funcs']['GetTeamRounds']
-					local pingPlyTbl = C['Funcs']['EndPlayerTable']
-					local gameScore = C['Format']('%s:%s', teamRounds(true), teamRounds(false))
-					-- redo way that teams are retrieved to be less shit
-					local content = C['Format']([[CS:GO match Finished\n\n**Map:** %s\n\n**Score:** %s\n\n**Your Team (%s)**%s**Enemy Team (%s)**%s]], map, gameScore, teamInitials(true), pingPlyTbl(true), teamInitials(false), pingPlyTbl(false))
+					local myTeam, enemyTeam = C['Funcs']['EndPingMessage']()
+					local teamScore, enemyScore = C['Funcs']['GetTeamRounds']()
+					local myTeamInitials, enemyTeamInitials = C['Funcs']['GetTeamInitials']()
+					local content = C['Format']([[CS:GO match Finished\n\n**Map:** %s\n\n**Score:** %s:%s\n\n**Your Team (%s)**%s**Enemy Team (%s)**%s]], map, teamScore, enemyScore, myTeamInitials, myTeam, enemyTeamInitials, enemyTeam)
 
 					panorama['loadstring'](C['Format']([[
 						$.AsyncWebRequest('%s',
@@ -2179,9 +2233,9 @@ C['Events'] = {
 	['player_chat'] = {
 		['Func'] = function(e)
 			local speaker = e['entity']
-			local speakerTeam =  C['Funcs']['GetTeam'](speaker)
+			local speakerTeam = C['Funcs']['GetTeam'](speaker)
 			local me = C['Me']()
-			local myTeam =  C['Funcs']['GetTeam'](me)
+			local myTeam = C['Funcs']['GetTeam'](me)
 			local text = e['text']
 
 			if (C['Get'](C['UI']['MM']['AFK Buy-Drop']['Element'])) then
@@ -2290,5 +2344,3 @@ for cat, entry in pairs(C['UI']) do
 		C['SetCallback'](table['Element'], table['Callback'])
 	end
 end
-
---C['Funcs']['PrintChangelogs']()
