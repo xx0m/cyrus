@@ -837,8 +837,8 @@ C.Notifications = {
 	Votes = {
 		Kick = function(tab)
 			local col = C.Colours
-			local teamInitials = tab.team == 2 and 'T' or 'CT'
-			local teamCol = tab.team == 2 and col.Yellow or col.Blue
+			local teamInitials = tab.team == 3 and 'CT' or 'T'
+			local teamCol = tab.team == 3 and col.Blue or col.Yellow
 			local description = tab.description
 			local descriptionFormatted = cache.format('%s', col.Purple .. description)
 			local teamFormatted = cache.format('%s%s', teamCol .. teamInitials, col.White)
@@ -858,7 +858,7 @@ C.Notifications = {
 		Start = function(tab)
 			local col = C.Colours
 			local player = tab.player
-			local playerFormatted = cache.format('%s%s%s', tab.team and col.Blue or col.LightYellow, player, col.White)
+			local playerFormatted = cache.format('%s%s%s', tab.team == 3 and col.Blue or col.LightYellow, player, col.White)
 			local description = tab.description
 			local descriptionFormatted = cache.format('%s', col.Purple .. description)
 			local options = cache.get(C.UI.NotificationType.Element)
@@ -875,7 +875,7 @@ C.Notifications = {
 		Vote = function(tab)
 			local col = C.Colours
 			local player = tab.player
-			local playerFormatted = cache.format('%s%s%s', tab.team and col.Blue or col.LightYellow, player, col.White)
+			local playerFormatted = cache.format('%s%s%s', tab.team == 3 and col.Blue or col.LightYellow, player, col.White)
 			local vote = tab.vote
 			local voteFormatted = cache.format('%s%s', vote and col.Green .. 'Yes' or col.Red .. 'No', col.White)
 			local options = cache.get(C.UI.NotificationType.Element)
@@ -1106,6 +1106,8 @@ C.Notifications = {
 			local toLanguage = (tab.og_text and 'OG Msg' or tab.to_lang)
 			local toLanguageFormatted = col.Red .. toLanguage .. col.White
 			local detectedLang = tab.from_lang or 'n/a'
+			local options = cache.get(C.UI.NotificationType.Element)
+			local hasValue = C.Funcs.TableHasValue
 
 			if (hasValue(options, 'Console')) then
 				C.Notifications.Console.Log({text = cache.format('Translate: [%s] %s', toLanguage, text), normal_log = true})
@@ -1114,13 +1116,6 @@ C.Notifications = {
 			if (hasValue(options, 'Chat Print')) then
 				C.Libs.ChatPrint.Send(cache.format('[%sCyrus%s] [%s] %s', col.Blue, col.White, toLanguageFormatted, text))
 			end
-		end,
-		Error = function(tab)
-			local col = C.Colours
-			local reason = tab.reason
-			local err = col.Red .. 'Failed' .. col.White
-
-			C.Libs.ChatPrint.Send(cache.format('[%sCyrus%s] [%s] %s', col.Blue, col.White, err, reason))
 		end
 	}
 }
@@ -2324,8 +2319,6 @@ C.Events = {
 		['ranks'] = {
 			EventName = 'player_chat',
 			player_chat = function(e)
-				for k,v in pairs(e) do print(k) end
-
 				if (C.Funcs.IsConnected(cache.me())) then
 					local text = e.text
 					local prefix = C.Chat.Prefix
@@ -2375,7 +2368,7 @@ C.Events = {
 						local command, message = text:match('^(.-) (.*)$')
 
 						if ((command == 'say' or command == 'say_team') and message ~= nil and message ~= '') then
-							if (message:find('.tsay') ~= nil) then
+							if (message:find(C.Chat.Prefix .. 'tsay') ~= nil) then
 								if (C.Vars.Translator.LatestTranslation.translated_text == '' and C.Vars.Translator.LatestTranslation.last_message ~= message) then
 
 									if (message:find('"', 1) and message:find('"', -1)) then
@@ -2562,6 +2555,15 @@ C.Events = {
 
 			C.Notifications.UIToggle('Translator', value)
 		end,
+		Callback_incoming = function(ref, value)
+			C.Notifications.UIToggle('Translate Incoming Messages', value)
+		end,
+		Callback_outgoing = function(ref, value)
+			C.Notifications.UIToggle('Translate Outgoing Messages', value)
+		end,
+		Callback_showogmsg = function(ref, value)
+			C.Notifications.UIToggle('Show OG Messages', value)
+		end,
 		player_chat = function(e)
 			if (e.entity ~= cache.me()) then
 				local text, name = e.text, e.name
@@ -2580,7 +2582,7 @@ C.Events = {
 				local command, message = text:match('^(.-) (.*)$')
 
 				if ((command == 'say' or command == 'say_team') and message ~= nil and message ~= '') then
-					if (message:find('.tsay') ~= nil) then
+					if (message:find(C.Chat.Prefix .. 'tsay') ~= nil) then
 						e.text = ''
 					end
 
@@ -2960,6 +2962,8 @@ C.UI.Translator.Hidden.Incoming:on('change', C.Events.Translator.Callback_incomi
 
 C.UI.Translator.Hidden.Outgoing:on('string_cmd', C.Events.Translator.string_cmd)
 C.UI.Translator.Hidden.Outgoing:on('change', C.Events.Translator.Callback_outgoing)
+
+C.UI.Translator.Hidden.ShowOGMessage:on('change', C.Events.Translator.Callback_showogmsg)
 
 C.UI.Translator.Element:on('change', C.Events.Translator.Callback)
 
