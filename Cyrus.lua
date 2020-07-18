@@ -853,7 +853,7 @@ C.Notifications = {
 			end
 
 			if (hasValue(options, 'Chat Print')) then
-				C.Libs.ChatPrint.Send(cache.format('[%sCyrus%s] %sVote %s- The %s\'s started a vote to %s %s', col.Blue, col.White, col.Gold, col.White, teamFormatted, descriptionFormatted, targetFormatted))
+				C.Libs.ChatPrint.Send(cache.format('[%sCyrus%s] %s The %s\'s started a vote to %s %s', col.Blue, col.White, col.Gold .. 'Vote' .. col.White .. ' -', teamFormatted, descriptionFormatted, targetFormatted))
 			end
 		end,
 		Start = function(tab)
@@ -870,7 +870,7 @@ C.Notifications = {
 			end
 
 			if (hasValue(options, 'Chat Print')) then
-				C.Libs.ChatPrint.Send(cache.format('[%sCyrus%s] %s called a vote to %s', col.Blue, col.White, playerFormatted, descriptionFormatted))
+				C.Libs.ChatPrint.Send(cache.format('[%sCyrus%s] %s %s called a vote to %s', col.Blue, col.White, col.Gold .. 'Vote' .. col.White .. ' -', playerFormatted, descriptionFormatted))
 			end
 		end,
 		Vote = function(tab)
