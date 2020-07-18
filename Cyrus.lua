@@ -339,8 +339,8 @@ local C = {
 	Chat = {
 		Prefix = '!',
 		Spam = {
-			LastChatMessage = cache.tickcount(),
-			LastRadioMessage = cache.tickcount(),
+			LastChatMessage = 0,
+			LastRadioMessage = 0,
 			RadioMessage = 'getout',
 			DefaultMessage = 'your tears are currently being harvested',
 			Types = {
@@ -837,8 +837,9 @@ C.Notifications = {
 	Votes = {
 		Kick = function(tab)
 			local col = C.Colours
-			local teamInitials = tab.team == 3 and 'CT' or 'T'
-			local teamCol = tab.team == 3 and col.Blue or col.Yellow
+			local team = tab.team
+			local teamInitials = team == 2 and 'T' or 'CT'
+			local teamCol = team == 2 and col.LightYellow or col.Blue
 			local description = tab.description
 			local descriptionFormatted = cache.format('%s', col.Purple .. description)
 			local teamFormatted = cache.format('%s%s', teamCol .. teamInitials, col.White)
@@ -1329,7 +1330,7 @@ C.Vars = {
 		}
 	},
 	UseSpam = {
-		LastUse = cache.tickcount(),
+		LastUse = 0,
 		Use = false
 	},
 	Translator = {
@@ -1437,7 +1438,8 @@ C.Funcs = {
 	GetTeam = function(player)
 		return C.Funcs.GetPlayerProperty(player, 'm_iTeam')
 	end,
-	SteamID3To64 = function(id)
+	GetSteamID64 = function(player)
+		local id = cache.sid64(player)
 		local y
 		local z
 
@@ -1532,13 +1534,14 @@ C.Funcs = {
 		local getCompRank = C.Funcs.GetCompRank
 		local sid3To64 = C.Funcs.SteamID3To64
 		local isBot = C.Funcs.IsBot
+		local getSteamID64 = C.Funcs.GetSteamID64
 		local myTeam = getTeam(cache.me())
 
 		for _, v in pairs(C.Funcs.GetConnectedPlayers()) do
 			for _, player in pairs(v) do
 				local nick = getName(player)
 				local playerTeam = getTeam(player)
-				local sid64 = sid3To64(cache.sid64(player))
+				local sid64 = getSteamID64(player)
 				local rank = getCompRank(player)
 				local ref = data[(playerTeam == myTeam and teamInitials or enemyInitials)]
 
@@ -1566,7 +1569,7 @@ C.Funcs = {
 		local getTeam = C.Funcs.GetTeam
 		local getName = cache.getName
 		local getCompRank = C.Funcs.GetCompRank
-		local sid3To64 = C.Funcs.SteamID3To64
+		local getSteamID64 = C.Funcs.GetSteamID64
 		local isBot = C.Funcs.IsBot
 
 		local myTeam = getTeam(cache.me())
@@ -1603,7 +1606,7 @@ C.Funcs = {
 				local nick = getName(player)
 				local rank = getCompRank(player)
 				local playerTeam = getTeam(player)
-				local sid64 = sid3To64(player)
+				local sid64 = getSteamID64(player)
 				local ref = data[(playerTeam == myTeam) and teamInitials or enemyInitials]
 				local kills, deaths, assists, mvp = getProp(player, 'm_iKills'), getProp(player, 'm_iAssists'), getProp(player, 'm_iDeaths'), getProp(player, 'm_iMVPs')
 
@@ -1664,7 +1667,7 @@ C.Funcs = {
 		return (C.UI.TeamChat.Element:get() and 'say_team' or 'say') .. ' '
 	end,
 	GetPlayerColour = function()
-		return C.Panorama.GameStateAPI.GetPlayerColour(C.Panorama.MyPersonaAPI.GetXuid())
+		return C.Panorama.GameStateAPI.GetPlayerColor(C.Panorama.MyPersonaAPI.GetXuid())
 	end,
 	IsOnDedicatedServer = function()
 		return cache.getProp(cache.gameRules(), 'm_bIsValveDS') == 1
@@ -1767,6 +1770,11 @@ C.Funcs = {
 	end,
 	GetRoundEndReason = function()
 		return C.Vars.RoundEndReasons[C.Vars.LastRoundData.Reason] or '?'
+	end,
+	ResetSpamData = function()
+		C.Chat.Spam.LastRadioMessage = 0
+		C.Chat.Spam.LastChatMessage = 0
+		C.Vars.UseSpam.LastUse = 0
 	end
 }
 
@@ -1801,7 +1809,11 @@ C.Events = {
 					C.Chat.Spam.LastRadioMessage = cache.tickcount()
 				end
 			end
-		end
+		end,
+		round_end = C.Funcs.ResetSpamData,
+		cs_win_panel_match = C.Funcs.ResetSpamData,
+		round_announce_match_start = C.Funcs.ResetSpamData,
+		cs_win_panel_match = C.Funcs.ResetSpamData
 	},
 	VoteRevealer = {
 		Callback = function(ref, value)
@@ -1819,6 +1831,7 @@ C.Events = {
 			cache.delay(0.3, function()
 				local team = e.team
 				local base = C.Votes
+				local getTeam = C.Funcs.GetTeam
 
 				if (base.VoteOptions) then
 					local controller
@@ -1860,7 +1873,6 @@ C.Events = {
 
 				if (ongoingVote) then
 					local player = e.entityid
-					local realTeam = C.Funcs.GetTeam(player)
 					local voteText = ongoingVote.options[e.vote_option + 1]
 
 					table.insert(ongoingVote.votes[voteText], player)
@@ -1869,7 +1881,7 @@ C.Events = {
 						ongoingVote.caller = player
 
 						if (ongoingVote.type ~= 'kick') then
-							C.Notifications.Votes.Start({player = cache.getName(player), description = C.Votes.Descriptions[ongoingVote.type], team = realTeam})
+							C.Notifications.Votes.Start({player = cache.getName(player) or 'n/a', description = C.Votes.Descriptions[ongoingVote.type], team = e.team})
 						end
 					end
 
@@ -1878,12 +1890,12 @@ C.Events = {
 							if (ongoingVote.target == nil) then
 								ongoingVote.target = player
 
-								C.Notifications.Votes.Kick({team = ongoingVote.team == 3, target = cache.getName(ongoingVote.target), description = C.Votes.Descriptions[ongoingVote.type], team = realTeam})
+								C.Notifications.Votes.Kick({target = cache.getName(player), description = C.Votes.Descriptions[ongoingVote.type], team = e.team})
 							end
 						end
 					end
 
-					C.Notifications.Votes.Vote({player = cache.getName(player), vote = (voteText == 'Yes'), team = realTeam})
+					C.Notifications.Votes.Vote({player = cache.getName(player) or 'n/a', vote = (voteText == 'Yes'), team = e.team})
 				end
 			end)
 		end,
@@ -1919,7 +1931,11 @@ C.Events = {
 					end
 				end
 			end
-		end
+		end,
+		round_end = C.Funcs.ResetSpamData,
+		cs_win_panel_match = C.Funcs.ResetSpamData,
+		round_announce_match_start = C.Funcs.ResetSpamData,
+		cs_win_panel_match = C.Funcs.ResetSpamData
 	},
 	PlasmaShot = {
 		Callback = function(ref, value)
@@ -2135,6 +2151,7 @@ C.Events = {
 					local type, msg = cache.get(C.UI.Spam.Element), cache.get(e)
 					local off = (msg == 'Off')
 					local base = C.Events.Spam[type]
+					local baseReset = C.Events.Spam.ResetEvents
 
 					if (type ~= '-') then
 						if (C.Chat.Spam.Types[type] ~= msg) then
@@ -2157,9 +2174,19 @@ C.Events = {
 								base.EventFunc = base.run_command
 							end
 
+							for k,v in pairs(baseReset.Events) do
+								baseReset.Events[k].Event = cache.registerEvent(baseReset.Events[k].Name, baseReset.EventFunc)
+							end
+
 							base.Event = cache.registerEvent(base.Name, base.EventFunc)
 						else
 							cache.unregisterEvent(base.Name, base.EventFunc)
+
+							for k,v in pairs(baseReset.Events) do
+								cache.registerEvent(baseReset.Events[k].Name, baseReset.EventFunc)
+
+								baseReset.Events[k].Event = nil
+							end
 
 							base.Name = ''
 							base.EventFunc = C.Funcs.EmptyFunc()
@@ -2210,7 +2237,16 @@ C.Events = {
 					end
 				end
 			end
+		},
+		ResetEvents = {
+			EventFunc = C.Funcs.ResetSpamData,
+			Events = {
+				{Name = 'round_end'},
+				{Name = 'cs_win_panel_match'},
+				{Name = 'round_announce_match_start'}
+			}
 		}
+
 	},
 	ShitPostList = {
 		Callback = function(e)
@@ -2903,6 +2939,9 @@ C.UI.ShowUIMessages.Element:on('change', C.Events.ShowUIMessages.Callback)
 
 C.UI.AFKMode.Element:on('change', C.Events.AFKMode.Callback)
 
+C.UI.RadioSpam.Element:on('round_end', C.Events.RadioSpam.round_end)
+C.UI.RadioSpam.Element:on('cs_win_panel_match', C.Events.RadioSpam.cs_win_panel_match)
+C.UI.RadioSpam.Element:on('round_announce_match_start', C.Events.RadioSpam.round_announce_match_start)
 C.UI.RadioSpam.Element:on('run_command', C.Events.RadioSpam.run_command)
 C.UI.RadioSpam.Element:on('change', C.Events.RadioSpam.Callback)
 
@@ -2913,6 +2952,9 @@ C.UI.VoteRevealer.Element:on('change', C.Events.VoteRevealer.Callback)
 
 C.UI.TeamChat.Element:on('change', C.Events.TeamChat.Callback)
 
+C.UI.UseSpam.Element:on('round_end', C.Events.UseSpam.round_end)
+C.UI.UseSpam.Element:on('cs_win_panel_match', C.Events.UseSpam.cs_win_panel_match)
+C.UI.UseSpam.Element:on('round_announce_match_start', C.Events.UseSpam.round_announce_match_start)
 C.UI.UseSpam.Element:on('setup_command', C.Events.UseSpam.setup_command)
 C.UI.UseSpam.Element:on('change', C.Events.UseSpam.Callback)
 
