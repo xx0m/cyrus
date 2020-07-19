@@ -1698,7 +1698,8 @@ C.Funcs = {
 						C.Vars.Translator.OnCooldown = false
 					end)
 
-					C.Notifications.Translate.Chat({to_lang = 'Error', from_lang = 'Error', error = 'Sending normal message. You got rate limited by google for spamming api requests [avoid using chat spammer w/ translator]'})
+					C.Notifications.Translate.Chat({to_lang = 'Error', from_lang = 'Error', error = 'You got rate limited by google for spamming api requests [avoid using chat spammer w/ translator]'})
+					C.Vars.Translator.LatestTranslation = {last_message = tab.text, translated_text = tab.text, og_text = tab.text, from_lang = detectedLanguage, to_lang = toLang}
 					cache.exec(teamChat and teamChat or C.Funcs.GetChatMode(), tab.text)
 				elseif (response.status == 200) then -- good req
 					local tab = json.parse(response.body)
@@ -1727,16 +1728,19 @@ C.Funcs = {
 						C.Vars.Translator.LatestTranslation = {last_message = translatedText, translated_text = translatedText, og_text = payload.q, from_lang = detectedLanguage, to_lang = toLang}
 
 					else
-						C.Notifications.Translate.Chat({to_lang = 'Error', from_lang = 'Error', error = 'Sending normal message. Whack message / language used [send message + language used on forum]'})
+						C.Notifications.Translate.Chat({to_lang = 'Error', from_lang = 'Error', error = 'Whack message / language used [send message + language used on forum]'})
+						C.Vars.Translator.LatestTranslation = {last_message = tab.text, translated_text = tab.text, og_text = tab.text, from_lang = detectedLanguage, to_lang = toLang}
 						cache.exec(teamChat and teamChat or C.Funcs.GetChatMode(), tab.text)
 					end
 				else
-					C.Notifications.Translate.Chat({to_lang = 'Error', from_lang = 'Error', error = 'Sending normal message. Whack request [send the message + language used on forum]'})
+					C.Notifications.Translate.Chat({to_lang = 'Error', from_lang = 'Error', error = 'Whack request [send the message + language used on forum]'})
+					C.Vars.Translator.LatestTranslation = {last_message = tab.text, translated_text = tab.text, og_text = tab.text, from_lang = detectedLanguage, to_lang = toLang}
 					cache.exec(teamChat and teamChat or C.Funcs.GetChatMode(), tab.text)
 				end
 			end)
 		else
-			C.Notifications.Translate.Chat({to_lang = 'Error', from_lang = 'Error', error = 'Sending normal message. You are rate limited & cannot use the translation feature'})
+			C.Notifications.Translate.Chat({to_lang = 'Error', from_lang = 'Error', error = 'You are rate limited & cannot use the translation feature'})
+			C.Vars.Translator.LatestTranslation = {last_message = tab.text, translated_text = tab.text, og_text = tab.text, from_lang = detectedLanguage, to_lang = toLang}
 			cache.exec(teamChat and teamChat or C.Funcs.GetChatMode(), tab.text)
 		end
 	end,
