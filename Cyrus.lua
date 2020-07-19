@@ -1103,8 +1103,8 @@ C.Notifications = {
 	Translate = {
 		Chat = function(tab)
 			local col = C.Colours
-			local text = tab.og_text and tab.og_text or tab.translated_text
-			local toLanguage = (tab.og_text and 'OG Msg' or tab.to_lang)
+			local text = tab.error and tab.error or (tab.og_text and tab.og_text or tab.translated_text)
+			local toLanguage = tab.error and 'Error' or (tab.og_text and 'OG Msg' or tab.to_lang)
 			local toLanguageFormatted = col.Red .. toLanguage .. col.White
 			local detectedLang = tab.from_lang or 'n/a'
 			local options = cache.get(C.UI.NotificationType.Element)
@@ -1697,6 +1697,9 @@ C.Funcs = {
 					cache.delay(C.Vars.Translator.CooldownTimer, function()
 						C.Vars.Translator.OnCooldown = false
 					end)
+
+					C.Notifications.Translate.Chat({to_lang = 'Error', from_lang = 'Error', error = 'Sending normal message. You got rate limited by google for spamming api requests [avoid using chat spammer w/ translator]'})
+					cache.exec(teamChat and teamChat or C.Funcs.GetChatMode(), tab.text)
 				elseif (response.status == 200) then -- good req
 					local tab = json.parse(response.body)
 
@@ -1722,9 +1725,19 @@ C.Funcs = {
 						end
 
 						C.Vars.Translator.LatestTranslation = {last_message = translatedText, translated_text = translatedText, og_text = payload.q, from_lang = detectedLanguage, to_lang = toLang}
+
+					else
+						C.Notifications.Translate.Chat({to_lang = 'Error', from_lang = 'Error', error = 'Sending normal message. Whack message / language used [send message + language used on forum]'})
+						cache.exec(teamChat and teamChat or C.Funcs.GetChatMode(), tab.text)
 					end
+				else
+					C.Notifications.Translate.Chat({to_lang = 'Error', from_lang = 'Error', error = 'Sending normal message. Whack request [send the message + language used on forum]'})
+					cache.exec(teamChat and teamChat or C.Funcs.GetChatMode(), tab.text)
 				end
 			end)
+		else
+			C.Notifications.Translate.Chat({to_lang = 'Error', from_lang = 'Error', error = 'Sending normal message. You are rate limited & cannot use the translation feature'})
+			cache.exec(teamChat and teamChat or C.Funcs.GetChatMode(), tab.text)
 		end
 	end,
 	ResetTranslationData = function()
