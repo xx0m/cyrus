@@ -1691,35 +1691,38 @@ C.Funcs = {
 			}
 
 			http.get('https://translate.googleapis.com/translate_a/single', {params = payload}, function(success, response)
-				if (response.status_text == 'error') then
+				if (response.status == 429) then -- too many req
 					C.Vars.Translator.OnCooldown = true
 
 					cache.delay(C.Vars.Translator.CooldownTimer, function()
 						C.Vars.Translator.OnCooldown = false
 					end)
-				elseif (response.status_text ~= 'error' and response.body) then
+				elseif (response.status == 200) then -- good req
 					local tab = json.parse(response.body)
-					local translatedText = tab[1][1][1]
-					local fromText = tab[1][1][2]
-					local detectedLanguage = tab[9][1][1]
 
-					if (chatSay) then
-						cache.exec((teamChat and teamChat or C.Funcs.GetChatMode()), translatedText)
+					if (tab[1][1][1] and tab[1][1][2] and tab[9][1][1]) then
+						local translatedText = tab[1][1][1]
+						local fromText = tab[1][1][2]
+						local detectedLanguage = tab[9][1][1]
 
-						if (C.UI.Translator.Hidden.ShowOGMessage:get()) then
-							C.Notifications.Translate.Chat({translated_text = translatedText, og_text = payload.q, from_lang = detectedLanguage, to_lang = toLang})
+						if (chatSay) then
+							cache.exec((teamChat and teamChat or C.Funcs.GetChatMode()), translatedText)
+
+							if (C.UI.Translator.Hidden.ShowOGMessage:get()) then
+								C.Notifications.Translate.Chat({translated_text = translatedText, og_text = payload.q, from_lang = detectedLanguage, to_lang = toLang})
+							end
+
+							cache.delay(0, function()
+								C.Funcs.ResetTranslationData()
+							end)
 						end
 
-						cache.delay(0, function()
-							C.Funcs.ResetTranslationData()
-						end)
-					end
+						if (showTranslation) then
+							C.Notifications.Translate.Chat({translated_text = translatedText, from_lang = detectedLanguage, to_lang = detectedLanguage})
+						end
 
-					if (showTranslation) then
-						C.Notifications.Translate.Chat({translated_text = translatedText, from_lang = detectedLanguage, to_lang = detectedLanguage})
+						C.Vars.Translator.LatestTranslation = {last_message = translatedText, translated_text = translatedText, og_text = payload.q, from_lang = detectedLanguage, to_lang = toLang}
 					end
-
-					C.Vars.Translator.LatestTranslation = {last_message = translatedText, translated_text = translatedText, og_text = payload.q, from_lang = detectedLanguage, to_lang = toLang}
 				end
 			end)
 		end
