@@ -88,7 +88,8 @@ local C = {
 		LobbyAPI = cache.open().LobbyAPI,
 		PartyListAPI = cache.open().PartyListAPI,
 		MatchInfoAPI = cache.open().MatchInfoAPI,
-		GameStateAPI = cache.open().GameStateAPI
+		GameStateAPI = cache.open().GameStateAPI,
+		CompetitiveMatchAPI = cache.open().CompetitiveMatchAPI
 	},
 	MapList = {
 		['ar_baggage'] = 'Baggage',
@@ -1980,12 +1981,34 @@ C.Events = {
 	},
 	AutoDC = {
 		Callback = function(ref, value)
-			C.Notifications.UIToggle('Auto DC', value)
+			C.Notifications.UIToggle('Auto DC @ Match End', value)
 		end,
 		cs_win_panel_match = function(e)
 			cache.delay(1, function()
 				cache.exec('disconnect')
 			end)
+		end
+	},
+	AvoidPMB = {
+		Callback = function(ref, value)
+			C.Notifications.UIToggle('Auto DC @ Match Start', value)
+
+			C.Vars.AvoidPBMChangeUI = value
+		end,
+		paint_ui = function(e)
+			if (C.Panorama.PartyListAPI.IsPartySessionActive()) then
+				if (cache.tickcount() == 0) then
+					C.Panorama.LobbyAPI.CloseSession()
+				end
+
+				if (cache.tickcount() == 40) then
+					cache.exec('disconnect')
+
+					cache.delay(1, function()
+						C.Panorama.CompetitiveMatchAPI.ActionReconnectToOngoingMatch()
+					end)
+				end
+			end
 		end
 	},
 	DiscordPingStart = {
@@ -2892,6 +2915,9 @@ C.UI = {
 	AutoDC = {
 		Element = cache.checkbox(C.Config.Panel, C.Config.Side, 'Auto DC @ Match End')
 	},
+	AvoidPMB = {
+		Element = cache.checkbox(C.Config.Panel, C.Config.Side, 'Auto DC @ Match Start [if in party]')
+	},
 	DiscordPingStart = {
 		Element = cache.checkbox(C.Config.Panel, C.Config.Side, 'Discord Ping [Match Start]')
 	},
@@ -2984,6 +3010,9 @@ C.UI.PlasmaShot.Element:on('change', C.Events.PlasmaShot.Callback)
 C.UI.AutoDC.Element:on('cs_win_panel_match', C.Events.AutoDC.cs_win_panel_match)
 C.UI.AutoDC.Element:on('change', C.Events.AutoDC.Callback)
 
+C.UI.AvoidPMB.Element:on('paint_ui', C.Events.AvoidPMB.paint_ui)
+C.UI.AvoidPMB.Element:on('change', C.Events.AvoidPMB.Callback)
+
 C.UI.DiscordPingStart.Element:on('round_announce_match_start', C.Events.DiscordPingStart.round_announce_match_start)
 C.UI.DiscordPingStart.Element:on('change', C.Events.DiscordPingStart.Callback)
 
@@ -3007,12 +3036,10 @@ C.UI.ShotLogs.Element:on('aim_miss', C.Events.ShotLogs.aim_miss)
 C.UI.ShotLogs.Element:on('aim_hit', C.Events.ShotLogs.aim_hit)
 C.UI.ShotLogs.Element:on('player_hurt', C.Events.ShotLogs.player_hurt)
 C.UI.ShotLogs.Element:on('cs_game_disconnected', C.Events.ShotLogs.ResetShotData)
-C.UI.ShotLogs.Element:on('game_newmap', C.Events.ShotLogs.ResetShotData)
 C.UI.ShotLogs.Element:on('round_end', C.Events.ShotLogs.ResetShotData)
 C.UI.ShotLogs.Element:on('change', C.Events.ShotLogs.Callback)
 
 C.UI.TeamDamageLogs.Element:on('cs_game_disconnected', C.Events.ShotLogs.ResetTeamDmgData)
-C.UI.TeamDamageLogs.Element:on('game_newmap', C.Events.ShotLogs.ResetTeamDmgData)
 C.UI.TeamDamageLogs.Element:on('player_death', C.Events.TeamDamageLogs.player_death)
 C.UI.TeamDamageLogs.Element:on('player_hurt', C.Events.TeamDamageLogs.player_hurt)
 C.UI.TeamDamageLogs.Element:on('change', C.Events.TeamDamageLogs.Callback)
