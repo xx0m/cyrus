@@ -1,4 +1,3 @@
---client.exec('clear')
 local err = false
 local requiredLibs = {
 	[1] = {
@@ -911,7 +910,7 @@ C.Notifications = {
 			local hitDamageFormatted = col.LightRed .. hitDamage .. col.White
 			local firedDamage = fired.damage
 			local firedDamageFormatted = col.LightGreen .. firedDamage .. col.White
-			local health = cache.getProp(hit.target, 'm_iHealth')
+			local health = cache.getProp(hit.target, 'm_iHealth') or -1
 			local healthFormatted = col.LightRed .. health .. col.White
 
 			local flags = {
@@ -1405,7 +1404,7 @@ C.Funcs = {
 		elseif (type == 'Super Cancer Strike') then
 			return rand(words.SuperCancerStrike)
 		else
-			return rand(words.Questions)
+			return rand(words.Questions) .. '?'
 		end
 	end,
 	GetRandomTableElement = function(tab)
@@ -1984,7 +1983,7 @@ C.Events = {
 			C.Notifications.UIToggle('Auto DC @ Match End', value)
 		end,
 		cs_win_panel_match = function(e)
-			cache.delay(1, function()
+			cache.delay(C.UI.DiscordPingEnd.Element:get() and 0.3 or 0, function()
 				cache.exec('disconnect')
 			end)
 		end
@@ -1997,7 +1996,7 @@ C.Events = {
 		end,
 		paint_ui = function(e)
 			if (C.Panorama.PartyListAPI.IsPartySessionActive()) then
-				if (cache.tickcount() == 0) then
+				if (cache.tickcount() > 0 and cache.tickcount() < 4) then
 					C.Panorama.LobbyAPI.CloseSession()
 				end
 
@@ -2092,7 +2091,7 @@ C.Events = {
 		end,
 		cs_win_panel_match = function()
 			if (C.Funcs.IsConnected(cache.me())) then
-				cache.delay(0.9, function()
+				cache.delay(0.29, function()
 					local myTeam, enemyTeam = C.Funcs.GetDiscordPingMsgEnd()
 					local myTeamScore, enemyTeamScore = C.Funcs.GetTeamRounds()
 					local myTeamInitials, enemyTeamInititals = C.Funcs.GetTeamInitials()
@@ -3035,11 +3034,11 @@ C.UI.ShotLogs.Element:on('aim_fire', C.Events.ShotLogs.aim_fire)
 C.UI.ShotLogs.Element:on('aim_miss', C.Events.ShotLogs.aim_miss)
 C.UI.ShotLogs.Element:on('aim_hit', C.Events.ShotLogs.aim_hit)
 C.UI.ShotLogs.Element:on('player_hurt', C.Events.ShotLogs.player_hurt)
-C.UI.ShotLogs.Element:on('cs_game_disconnected', C.Events.ShotLogs.ResetShotData)
 C.UI.ShotLogs.Element:on('round_end', C.Events.ShotLogs.ResetShotData)
 C.UI.ShotLogs.Element:on('change', C.Events.ShotLogs.Callback)
 
-C.UI.TeamDamageLogs.Element:on('cs_game_disconnected', C.Events.ShotLogs.ResetTeamDmgData)
+C.UI.TeamDamageLogs.Element:on('round_announce_match_start', C.Events.ShotLogs.ResetTeamDmgData)
+C.UI.TeamDamageLogs.Element:on('cs_win_panel_match', C.Events.ShotLogs.ResetTeamDmgData)
 C.UI.TeamDamageLogs.Element:on('player_death', C.Events.TeamDamageLogs.player_death)
 C.UI.TeamDamageLogs.Element:on('player_hurt', C.Events.TeamDamageLogs.player_hurt)
 C.UI.TeamDamageLogs.Element:on('change', C.Events.TeamDamageLogs.Callback)
